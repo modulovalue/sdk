@@ -530,6 +530,14 @@ final class _Smi extends _IntegerImplementation {
   @pragma("vm:external-name", "Smi_bitLength")
   external int get bitLength;
 
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "Smi_trailingZeroBitCount")
+  external int get trailingZeroBitCount;
+
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "Smi_oneBitCount")
+  external int get oneBitCount;
+
   /**
    * The digits of '00', '01', ... '99' as a single array.
    *
@@ -727,4 +735,12 @@ final class _Mint extends _IntegerImplementation {
   @pragma("vm:exact-result-type", "dart:core#_Smi")
   @pragma("vm:external-name", "Mint_bitLength")
   external int get bitLength;
+
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "Mint_trailingZeroBitCount")
+  external int get trailingZeroBitCount;
+
+  @pragma("vm:exact-result-type", "dart:core#_Smi")
+  @pragma("vm:external-name", "Mint_oneBitCount")
+  external int get oneBitCount;
 }

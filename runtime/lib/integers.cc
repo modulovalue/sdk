@@ -272,6 +272,22 @@ DEFINE_NATIVE_ENTRY(Smi_bitLength, 0, 1) {
   return Smi::New(result);
 }
 
+DEFINE_NATIVE_ENTRY(Smi_trailingZeroBitCount, 0, 1) {
+  const Smi& operand = Smi::CheckedHandle(zone, arguments->NativeArgAt(0));
+  int64_t value = operand.Value();
+  intptr_t result = Utils::CountTrailingZeros64(static_cast<uint64_t>(value));
+  ASSERT(Smi::IsValid(result));
+  return Smi::New(result);
+}
+
+DEFINE_NATIVE_ENTRY(Smi_oneBitCount, 0, 1) {
+  const Smi& operand = Smi::CheckedHandle(zone, arguments->NativeArgAt(0));
+  int64_t value = operand.Value();
+  intptr_t result = Utils::CountOneBits64(static_cast<uint64_t>(value));
+  ASSERT(Smi::IsValid(result));
+  return Smi::New(result);
+}
+
 // Should be kept in sync with il_*.cc EmitHashIntegerCodeSequence
 uint32_t Multiply64Hash(int64_t ivalue) {
   const uint64_t magic_constant = /*0x1b873593cc9e*/ 0x2d51;
@@ -321,6 +337,24 @@ DEFINE_NATIVE_ENTRY(Mint_bitLength, 0, 1) {
   }
   int64_t value = operand.Value();
   intptr_t result = Utils::BitLength(value);
+  ASSERT(Smi::IsValid(result));
+  return Smi::New(result);
+}
+
+DEFINE_NATIVE_ENTRY(Mint_trailingZeroBitCount, 0, 1) {
+  const Mint& operand = Mint::CheckedHandle(zone, arguments->NativeArgAt(0));
+  ASSERT(CheckInteger(operand));
+  int64_t value = operand.Value();
+  intptr_t result = Utils::CountTrailingZeros64(static_cast<uint64_t>(value));
+  ASSERT(Smi::IsValid(result));
+  return Smi::New(result);
+}
+
+DEFINE_NATIVE_ENTRY(Mint_oneBitCount, 0, 1) {
+  const Mint& operand = Mint::CheckedHandle(zone, arguments->NativeArgAt(0));
+  ASSERT(CheckInteger(operand));
+  int64_t value = operand.Value();
+  intptr_t result = Utils::CountOneBits64(static_cast<uint64_t>(value));
   ASSERT(Smi::IsValid(result));
   return Smi::New(result);
 }
