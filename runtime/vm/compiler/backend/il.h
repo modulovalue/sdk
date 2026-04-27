@@ -9200,7 +9200,8 @@ class UnaryIntegerOpInstr : public TemplateDefinition<1, NoThrow, Pure> {
  public:
   UnaryIntegerOpInstr(Token::Kind op_kind, Value* value, intptr_t deopt_id)
       : TemplateDefinition(deopt_id), op_kind_(op_kind) {
-    ASSERT((op_kind == Token::kNEGATE) || (op_kind == Token::kBIT_NOT));
+    ASSERT((op_kind == Token::kNEGATE) || (op_kind == Token::kBIT_NOT) ||
+           (op_kind == Token::kPOPCNT));
     SetInputAt(0, value);
   }
 

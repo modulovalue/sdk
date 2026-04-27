@@ -204,23 +204,6 @@ void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
   __ ret();
 }
 
-void AsmIntrinsifier::Smi_oneBitCount(Assembler* assembler,
-                                      Label* normal_ir_body) {
-  if (!TargetCPUFeatures::popcnt_supported()) {
-    __ jmp(normal_ir_body);
-    return;
-  }
-  ASSERT(kSmiTagShift == 1);
-  __ movq(RAX, Address(RSP, +1 * target::kWordSize));
-#if defined(DART_COMPRESSED_POINTERS)
-  __ movsxd(RAX, RAX);
-#endif
-  __ SmiUntag(RAX);
-  __ popcntq(RAX, RAX);
-  __ SmiTag(RAX);
-  __ ret();
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

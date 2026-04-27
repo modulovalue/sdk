@@ -648,6 +648,14 @@ bool GraphIntrinsifier::Build_Integer_negate(FlowGraph* flow_graph) {
   return BuildUnarySmiOp(flow_graph, Token::kNEGATE);
 }
 
+bool GraphIntrinsifier::Build_Smi_oneBitCount(FlowGraph* flow_graph) {
+#if defined(TARGET_ARCH_ARM64)
+  return BuildUnarySmiOp(flow_graph, Token::kPOPCNT);
+#else
+  return false;
+#endif
+}
+
 static bool BuildBinarySmiOp(FlowGraph* flow_graph, Token::Kind op_kind) {
   ASSERT(!flow_graph->function().has_unboxed_return());
   ASSERT(!flow_graph->function().is_unboxed_parameter_at(0));

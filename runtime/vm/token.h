@@ -60,6 +60,9 @@ namespace dart {
   TOK(kBIT_AND, "&", 11, kNoAttribute)                                         \
   TOK(kBIT_NOT, "~", 0, kNoAttribute)                                          \
                                                                                \
+  /* Bit-counting (no surface syntax; recognized intrinsic ops). */            \
+  TOK(kPOPCNT, "@popcnt", 0, kNoAttribute)                                     \
+                                                                               \
   /* Shift operators. */                                                       \
   TOK(kSHL, "<<", 12, kNoAttribute)                                            \
   TOK(kSHR, ">>", 12, kNoAttribute)                                            \

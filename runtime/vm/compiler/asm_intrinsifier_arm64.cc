@@ -189,26 +189,6 @@ void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
 #endif
 }
 
-void AsmIntrinsifier::Smi_oneBitCount(Assembler* assembler,
-                                      Label* normal_ir_body) {
-#if defined(DART_COMPRESSED_POINTERS)
-  __ b(normal_ir_body);
-#else
-  __ ldr(R0, Address(SP, 0 * target::kWordSize));
-  __ SmiUntag(R0);
-  // ARMv8 has no scalar popcount. Move the 64-bit value into a NEON
-  // register, count bits per byte with CNT, then sum the 8 lanes with
-  // UADDLV. For negative values the two's-complement bit pattern is what
-  // we want to count.
-  __ fmovdr(V0, R0);
-  __ vcnt(V0, V0);
-  __ vuaddlv(V0, V0);
-  __ fmovrs(R0, V0);
-  __ SmiTag(R0);
-  __ ret();
-#endif
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

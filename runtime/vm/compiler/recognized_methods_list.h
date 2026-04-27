@@ -539,7 +539,6 @@ namespace dart {
   V(CoreLibrary, _Smi, get:bitLength, Smi_bitLength, 0x7a97f52b)               \
   V(CoreLibrary, _Smi, get:trailingZeroBitCount, Smi_trailingZeroBitCount,     \
     0x00000000)                                                                \
-  V(CoreLibrary, _Smi, get:oneBitCount, Smi_oneBitCount, 0x00000000)           \
   V(CoreLibrary, _BigIntImpl, _lsh, Bigint_lsh, 0x3fc5ff22)                    \
   V(CoreLibrary, _BigIntImpl, _rsh, Bigint_rsh, 0xddf6be5f)                    \
   V(CoreLibrary, _BigIntImpl, _absAdd, Bigint_absAdd, 0x2aa56271)              \
@@ -622,6 +621,7 @@ namespace dart {
     0x512deb6f)                                                                \
   V(CoreLibrary, _StringBase, get:length, StringBaseLength, 0x5833d8ab)        \
   V(CoreLibrary, _Smi, ~, Smi_bitNegate, 0x8237e11c)                           \
+  V(CoreLibrary, _Smi, get:oneBitCount, Smi_oneBitCount, 0x00000000)           \
   V(CoreLibrary, _IntegerImplementation, +, Integer_add, 0x6ef842cb)           \
   V(CoreLibrary, _IntegerImplementation, -, Integer_sub, 0x630151bc)           \
   V(CoreLibrary, _IntegerImplementation, *, Integer_mul, 0x4670a659)           \

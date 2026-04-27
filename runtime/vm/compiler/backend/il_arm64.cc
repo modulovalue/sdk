@@ -4523,6 +4523,18 @@ void UnarySmiOpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
       // Remove inverted smi-tag.
       __ andi(result, result, compiler::Immediate(~kSmiTagMask));
       break;
+    case Token::kPOPCNT: {
+      // Untag, NEON popcount (CNT byte-wise + UADDLV horizontal sum), retag.
+      // ARMv8 has no scalar popcount; the GP <-> NEON crossings are the
+      // unavoidable cost on this ISA.
+      __ AsrImmediate(result, value, kSmiTagShift);
+      __ fmovdr(VTMP, result);
+      __ vcnt(VTMP, VTMP);
+      __ vuaddlv(VTMP, VTMP);
+      __ fmovrs(result, VTMP);
+      __ LslImmediate(result, result, kSmiTagShift);
+      break;
+    }
     default:
       UNREACHABLE();
   }

@@ -261,12 +261,6 @@ void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
   __ b(normal_ir_body);
 }
 
-void AsmIntrinsifier::Smi_oneBitCount(Assembler* assembler,
-                                      Label* normal_ir_body) {
-  // Not yet intrinsified on ARM. Fall back to the C++ native.
-  __ b(normal_ir_body);
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

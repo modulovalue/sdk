@@ -272,6 +272,95 @@ class BitArray {
     return -1;
   }
 
+  // ----- totalBitLength (sum of int.bitLength across every word) ----------
+  //
+  // A synthetic kernel that exercises int.bitLength once per word, the way
+  // cardinality exercises int.oneBitCount once per word. Lets us measure
+  // bitLength in isolation (and benchmark a future graph-intrinsification
+  // of it) without the early-exit behavior of highestSetBit.
+
+  // Hardware path: int.bitLength (asm-intrinsic CLZ today).
+  int totalBitLengthIntrinsic() {
+    var total = 0;
+    for (var i = 0; i < _words.length; i++) {
+      total += _words[i].bitLength;
+    }
+    return total;
+  }
+
+  // Software bit-trick equivalent of bitLength on a 32-bit word.
+  int totalBitLengthSwar() {
+    var total = 0;
+    for (var i = 0; i < _words.length; i++) {
+      final v = _words[i];
+      if (v != 0) total += _highBitInWord(v) + 1;
+    }
+    return total;
+  }
+
+  // ----- highestSetBit (position of the topmost set bit, -1 if empty) -----
+
+  // Hardware path: int.bitLength on the topmost nonzero word. bitLength is
+  // currently asm-intrinsified (CLZ on ARM64 / BSR on x64); a candidate for
+  // graph-intrinsification.
+  int highestSetBitIntrinsic() {
+    final w = _words;
+    for (var wordIdx = w.length - 1; wordIdx >= 0; wordIdx--) {
+      final v = w[wordIdx];
+      if (v != 0) {
+        final candidate = (wordIdx << _wordShift) + v.bitLength - 1;
+        return candidate < length ? candidate : -1;
+      }
+    }
+    return -1;
+  }
+
+  // Software bit-trick: log2(v) via binary search. ~5 conditional shifts
+  // versus the up-to-32 iterations of the naive scan.
+  static int _highBitInWord(int v) {
+    var r = 0;
+    if (v >= 0x10000) {
+      v >>= 16;
+      r += 16;
+    }
+    if (v >= 0x100) {
+      v >>= 8;
+      r += 8;
+    }
+    if (v >= 0x10) {
+      v >>= 4;
+      r += 4;
+    }
+    if (v >= 0x4) {
+      v >>= 2;
+      r += 2;
+    }
+    if (v >= 0x2) {
+      r += 1;
+    }
+    return r;
+  }
+
+  int highestSetBitSwar() {
+    final w = _words;
+    for (var wordIdx = w.length - 1; wordIdx >= 0; wordIdx--) {
+      final v = w[wordIdx];
+      if (v != 0) {
+        final candidate = (wordIdx << _wordShift) + _highBitInWord(v);
+        return candidate < length ? candidate : -1;
+      }
+    }
+    return -1;
+  }
+
+  // Bit-by-bit baseline: scan from the top one position at a time.
+  int highestSetBitNaive() {
+    for (var i = length - 1; i >= 0; i--) {
+      if (getBit(i)) return i;
+    }
+    return -1;
+  }
+
   // ----- intersection (out = a AND b, materialized as a new BitArray) -----
 
   // Word-level AND: one bitwise AND per 32-bit word of storage.
@@ -406,6 +495,22 @@ void checkCorrectness() {
           'select(size=$size, density=$density, k=$k)',
         );
       }
+
+      _assertEq(
+        bits.highestSetBitIntrinsic(),
+        bits.highestSetBitNaive(),
+        'highestSetBit.intrinsic(size=$size, density=$density)',
+      );
+      _assertEq(
+        bits.highestSetBitSwar(),
+        bits.highestSetBitNaive(),
+        'highestSetBit.swar(size=$size, density=$density)',
+      );
+      _assertEq(
+        bits.totalBitLengthIntrinsic(),
+        bits.totalBitLengthSwar(),
+        'totalBitLength(size=$size, density=$density)',
+      );
 
       final other = _randomArray(size, rng, density);
       final outSlow = BitArray(size);
@@ -552,6 +657,34 @@ List<BenchmarkBase> _benchmarks() {
     //   25,
     //   (bits) => sink ^= bits.selectSlow(_benchSize >> 3),
     // ),
+
+    // totalBitLength at quarter density: sum int.bitLength across every
+    // word. Mirrors cardinality but for bitLength, so the per-call cost
+    // of int.bitLength is isolated.
+    _BitArrayBenchmark(
+      'totalBitLength.swar',
+      25,
+      (bits) => sink ^= bits.totalBitLengthSwar(),
+    ),
+    _BitArrayBenchmark(
+      'totalBitLength.intrinsic',
+      25,
+      (bits) => sink ^= bits.totalBitLengthIntrinsic(),
+    ),
+
+    // highestSetBit at sparse density (1%): scan words top-down, return
+    // position of topmost set bit. Bench dominated by loop scan, not by
+    // bitLength itself.
+    _BitArrayBenchmark(
+      'highestSetBit.swar',
+      1,
+      (bits) => sink ^= bits.highestSetBitSwar(),
+    ),
+    _BitArrayBenchmark(
+      'highestSetBit.intrinsic',
+      1,
+      (bits) => sink ^= bits.highestSetBitIntrinsic(),
+    ),
 
     // Intersection: out = a AND b, written into a pre-allocated output.
     // Three variants:

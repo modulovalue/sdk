@@ -535,7 +535,7 @@ final class _Smi extends _IntegerImplementation {
   @pragma("vm:external-name", "Smi_trailingZeroBitCount")
   external int get trailingZeroBitCount;
 
-  @pragma("vm:recognized", "asm-intrinsic")
+  @pragma("vm:recognized", "graph-intrinsic")
   @pragma("vm:exact-result-type", "dart:core#_Smi")
   @pragma("vm:external-name", "Smi_oneBitCount")
   external int get oneBitCount;
