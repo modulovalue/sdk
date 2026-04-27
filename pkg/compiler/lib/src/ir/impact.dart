@@ -381,6 +381,12 @@ class ConstantImpactVisitor extends ir.VisitOnceConstantVisitor {
       _unexpectedConstant(node);
 
   @override
-  Never visitAuxiliaryConstant(ir.AuxiliaryConstant node) =>
-      _unexpectedConstant(node);
+  void visitAuxiliaryConstant(ir.AuxiliaryConstant node) {
+    if (node is ir.Float64x2Constant) {
+      // Float64x2Constant is a leaf (two doubles). No sub-expressions to
+      // record impact for.
+      return;
+    }
+    _unexpectedConstant(node);
+  }
 }

@@ -250,6 +250,10 @@ class UnevaluatedConstantFinder extends ComputeOnceConstantVisitor<bool> {
 
   @override
   bool visitAuxiliaryConstant(AuxiliaryConstant node) {
+    if (node is Float64x2Constant) {
+      // Fully evaluated constant, no unevaluated children.
+      return false;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant ${node} (${node.runtimeType}).",
     );

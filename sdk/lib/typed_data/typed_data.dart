@@ -14,6 +14,7 @@
 library dart.typed_data;
 
 import "dart:_internal" show Since, UnmodifiableListBase;
+import "dart:math" as math;
 
 export "dart:_internal" show BytesBuilder;
 
@@ -4683,9 +4684,9 @@ abstract final class Int32x4 {
 /// It is a compile-time error for a class to attempt to extend or implement
 /// `Float64x2`.
 abstract final class Float64x2 {
-  external factory Float64x2(double x, double y);
-  external factory Float64x2.splat(double v);
-  external factory Float64x2.zero();
+  const factory Float64x2(double x, double y) = _Float64x2._;
+  const factory Float64x2.splat(double v) = _Float64x2.splat;
+  const factory Float64x2.zero() = _Float64x2.zero;
 
   /// Uses the "x" and "y" lanes from [v].
   external factory Float64x2.fromFloat32x4(Float32x4 v);
@@ -4743,4 +4744,69 @@ abstract final class Float64x2 {
 
   /// The lane-wise square root of this [Float64x2].
   Float64x2 sqrt();
+}
+
+/// Pure-Dart implementation of [Float64x2] used as a base for the
+/// `_Float64x2` redirect target on non-VM backends (dart2js, DDC, dart2wasm).
+/// Each of those backends declares a thin `_Float64x2 extends _Float64x2Naive`
+/// stub in its `dart:typed_data` patch. The VM uses its own opaque
+/// implementation backed by SIMD intrinsics; see the VM patch.
+///
+/// Kept private to the library so it does not enlarge the public surface.
+@pragma('vm:deeply-immutable')
+final class _Float64x2Naive implements Float64x2 {
+  final double x;
+  final double y;
+
+  const _Float64x2Naive._(this.x, this.y);
+  const _Float64x2Naive.splat(double v) : x = v, y = v;
+  const _Float64x2Naive.zero() : x = 0.0, y = 0.0;
+
+  @override
+  Float64x2 operator +(Float64x2 other) =>
+      _Float64x2Naive._(x + other.x, y + other.y);
+  @override
+  Float64x2 operator -() => _Float64x2Naive._(-x, -y);
+  @override
+  Float64x2 operator -(Float64x2 other) =>
+      _Float64x2Naive._(x - other.x, y - other.y);
+  @override
+  Float64x2 operator *(Float64x2 other) =>
+      _Float64x2Naive._(x * other.x, y * other.y);
+  @override
+  Float64x2 operator /(Float64x2 other) =>
+      _Float64x2Naive._(x / other.x, y / other.y);
+  @override
+  Float64x2 scale(double s) => _Float64x2Naive._(x * s, y * s);
+  @override
+  Float64x2 abs() => _Float64x2Naive._(x.abs(), y.abs());
+  @override
+  Float64x2 clamp(Float64x2 lowerLimit, Float64x2 upperLimit) {
+    final lx = lowerLimit.x, ly = lowerLimit.y;
+    final ux = upperLimit.x, uy = upperLimit.y;
+    var nx = x > ux ? ux : x;
+    var ny = y > uy ? uy : y;
+    nx = nx < lx ? lx : nx;
+    ny = ny < ly ? ly : ny;
+    return _Float64x2Naive._(nx, ny);
+  }
+
+  @override
+  int get signMask => (x.isNegative ? 1 : 0) | (y.isNegative ? 2 : 0);
+
+  @override
+  Float64x2 withX(double newX) => _Float64x2Naive._(newX, y);
+  @override
+  Float64x2 withY(double newY) => _Float64x2Naive._(x, newY);
+  @override
+  Float64x2 min(Float64x2 other) => _Float64x2Naive._(
+      x < other.x ? x : other.x, y < other.y ? y : other.y);
+  @override
+  Float64x2 max(Float64x2 other) => _Float64x2Naive._(
+      x > other.x ? x : other.x, y > other.y ? y : other.y);
+  @override
+  Float64x2 sqrt() => _Float64x2Naive._(math.sqrt(x), math.sqrt(y));
+
+  @override
+  String toString() => '[$x, $y]';
 }

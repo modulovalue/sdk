@@ -586,6 +586,10 @@ class _ConstantVisitor implements ConstantVisitor<void> {
 
   @override
   void visitAuxiliaryConstant(AuxiliaryConstant constant) {
+    if (constant is Float64x2Constant) {
+      // Float64x2Constant carries only two doubles; nothing for RTA to walk.
+      return;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant "
       "${constant} (${constant.runtimeType}).",

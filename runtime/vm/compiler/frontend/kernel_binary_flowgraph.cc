@@ -3553,6 +3553,60 @@ Fragment StreamingFlowGraphBuilder::BuildConstructorInvocation(
   const auto& error = klass.EnsureIsFinalized(H.thread());
   ASSERT(error == Error::null());
 
+  // Intercept calls to `_Float64x2._/.splat/.zero` and replace them with a
+  // direct call to the matching static native helper (`Float64x2_fromDoubles`,
+  // `Float64x2_splat`, `Float64x2_zero`). The const ctors themselves have no
+  // body and no fields, so without this redirection runtime construction
+  // would produce instances with uninitialized `value_[2]` storage. The
+  // const-evaluation path is handled separately by the CFE bypass + the
+  // `Float64x2Constant` kernel kind.
+  if (klass.id() == kFloat64x2Cid) {
+    const String& ctor_name = H.DartSymbolPlain(
+        H.CanonicalNameString(kernel_name));
+    const Library& lib = Library::Handle(Z, klass.library());
+    enum { kHelperFromDoubles, kHelperSplat, kHelperZero, kHelperNone };
+    int helper_kind = kHelperNone;
+    if (ctor_name.Length() == 1 && ctor_name.CharAt(0) == '_') {
+      helper_kind = kHelperFromDoubles;
+    } else if (ctor_name.Equals("splat")) {
+      helper_kind = kHelperSplat;
+    } else if (ctor_name.Equals("zero")) {
+      helper_kind = kHelperZero;
+    }
+    if (helper_kind != kHelperNone) {
+      const Class& public_cls = Class::Handle(
+          Z, lib.LookupClassAllowPrivate(Symbols::Float64x2()));
+      ASSERT(!public_cls.IsNull());
+      const String& helper_name = String::ZoneHandle(
+          Z, String::New(helper_kind == kHelperSplat
+                             ? "_Float64x2Splat"
+                             : "_Float64x2FromDoubles",
+                         Heap::kOld));
+      const Function& helper = Function::ZoneHandle(
+          Z, public_cls.LookupStaticFunctionAllowPrivate(helper_name));
+      ASSERT(!helper.IsNull());
+
+      // Read the kernel-level positional/named arguments.
+      Array& argument_names = Array::ZoneHandle(Z);
+      intptr_t argument_count;
+      Fragment runtime_instructions = BuildArguments(
+          &argument_names, &argument_count,
+          /* positional_argument_count = */ nullptr);
+      if (helper_kind == kHelperZero) {
+        // `_Float64x2.zero()` has no kernel args; emit two literal 0.0s.
+        runtime_instructions += Constant(
+            Double::ZoneHandle(Z, Double::New(0.0, Heap::kOld)));
+        runtime_instructions += Constant(
+            Double::ZoneHandle(Z, Double::New(0.0, Heap::kOld)));
+        argument_count = 2;
+      }
+      runtime_instructions += StaticCall(position, helper, argument_count,
+                                         Array::null_array(), ICData::kStatic,
+                                         /*result_type=*/nullptr);
+      return runtime_instructions;
+    }
+  }
+
   if (klass.NumTypeArguments() > 0) {
     if (!klass.IsGeneric()) {
       const TypeArguments& type_arguments = TypeArguments::ZoneHandle(

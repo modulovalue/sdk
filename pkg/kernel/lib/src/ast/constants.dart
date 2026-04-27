@@ -307,6 +307,55 @@ class SymbolConstant extends Constant {
   }
 }
 
+/// Constant representation of `dart:typed_data.Float64x2(x, y)`.
+///
+/// Carries the two `double` lane values inline. Backends materialize the
+/// constant by calling their native Float64x2 allocator with [x] and [y].
+///
+/// Extends [AuxiliaryConstant] so generic visitors route through
+/// [ConstantVisitor.visitAuxiliaryConstant] without per-visitor wiring.
+/// Binary serialization is handled explicitly by a dedicated branch in
+/// `ast_to_binary.dart` / `ast_from_binary.dart`.
+class Float64x2Constant extends AuxiliaryConstant {
+  final double x;
+  final double y;
+
+  Float64x2Constant(this.x, this.y);
+
+  @override
+  void visitChildren(Visitor v) {}
+
+  @override
+  String toString() => 'Float64x2Constant(${toStringInternal()})';
+
+  @override
+  int get hashCode => _Hash.hash2(x, y);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Float64x2Constant &&
+          identical(other.x, x) &&
+          identical(other.y, y));
+
+  @override
+  DartType getType(StaticTypeContext context) {
+    // Float64x2 lives in dart:typed_data and isn't tracked in CoreTypes.
+    // Returning DynamicType keeps the static type machinery happy without
+    // needing an extra plumbed reference on this leaf.
+    return const DynamicType();
+  }
+
+  @override
+  void toTextInternal(AstPrinter printer) {
+    printer.write('const Float64x2(');
+    printer.write(x.toString());
+    printer.write(', ');
+    printer.write(y.toString());
+    printer.write(')');
+  }
+}
+
 class MapConstant extends Constant {
   final DartType keyType;
   final DartType valueType;

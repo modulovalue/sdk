@@ -3564,6 +3564,37 @@ class ConstantEvaluator
       );
     }
 
+    // Special case dart:typed_data's `_Float64x2` external const constructors.
+    // The class itself has no Dart-level fields (its storage is an opaque
+    // 16-byte payload in the VM heap object), so we can't produce a regular
+    // `InstanceConstant`. Instead emit a dedicated `Float64x2Constant` that
+    // each backend's runtime materializes via its native allocator.
+    if (klass.name == '_Float64x2' &&
+        klass.enclosingLibrary.importUri.scheme == 'dart' &&
+        klass.enclosingLibrary.importUri.path == 'typed_data') {
+      final String ctorName = constructor.name.text;
+      double? cx;
+      double? cy;
+      if (ctorName == '_' && positional.length == 2) {
+        if (positional[0] is DoubleConstant &&
+            positional[1] is DoubleConstant) {
+          cx = (positional[0] as DoubleConstant).value;
+          cy = (positional[1] as DoubleConstant).value;
+        }
+      } else if (ctorName == 'splat' && positional.length == 1) {
+        if (positional[0] is DoubleConstant) {
+          cx = cy = (positional[0] as DoubleConstant).value;
+        }
+      } else if (ctorName == 'zero' && positional.isEmpty) {
+        cx = 0.0;
+        cy = 0.0;
+      }
+      if (cx != null && cy != null) {
+        return canonicalize(new Float64x2Constant(cx, cy));
+      }
+      // Fall through to the generic external-const error path otherwise.
+    }
+
     List<DartType>? types = _evaluateTypeArguments(node, node.arguments);
     if (types == null) {
       AbortConstant error = _gotError!;

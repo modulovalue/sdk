@@ -611,6 +611,10 @@ class TypeLabeler
 
   @override
   void visitAuxiliaryConstant(AuxiliaryConstant node) {
+    if (node is Float64x2Constant) {
+      result.add('const Float64x2(${node.x}, ${node.y})');
+      return;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant ${node} (${node.runtimeType}).",
     );

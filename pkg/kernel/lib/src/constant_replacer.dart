@@ -255,6 +255,10 @@ class ConstantReplacer implements ConstantVisitor<Constant?> {
 
   @override
   Constant? visitAuxiliaryConstant(AuxiliaryConstant node) {
+    if (node is Float64x2Constant) {
+      // Float64x2Constant is a leaf with no sub-constants to replace.
+      return null;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant ${node} (${node.runtimeType}).",
     );

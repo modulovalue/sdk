@@ -250,6 +250,10 @@ class BinaryPrinter
       writeByte(ConstantTag.SymbolConstant);
       writeNullAllowedReference(constant.libraryReference);
       writeStringReference(constant.name);
+    } else if (constant is Float64x2Constant) {
+      writeByte(ConstantTag.Float64x2Constant);
+      writeDouble(constant.x);
+      writeDouble(constant.y);
     } else if (constant is MapConstant) {
       writeByte(ConstantTag.MapConstant);
       writeDartType(constant.keyType);

@@ -4138,33 +4138,20 @@ final class _Int32x4 implements Int32x4 {
 @patch
 @pragma('vm:deeply-immutable')
 class Float64x2 {
-  @patch
-  @pragma("vm:prefer-inline")
-  factory Float64x2(double x, double y) {
-    return _Float64x2FromDoubles(x, y);
-  }
-
+  // The unnamed factory, splat, and zero are now `const` in dart:typed_data
+  // and redirect to `_Float64x2._`, `_Float64x2.splat`, and
+  // `_Float64x2.zero`. The static helpers below remain because the call
+  // specializer's SimdOpInstr code path still references
+  // MethodRecognizer::kFloat64x2FromDoubles and kFloat64x2Splat.
   @pragma("vm:recognized", "other")
   @pragma("vm:exact-result-type", _Float64x2)
   @pragma("vm:external-name", "Float64x2_fromDoubles")
   external static _Float64x2 _Float64x2FromDoubles(double x, double y);
 
-  @patch
-  @pragma("vm:prefer-inline")
-  factory Float64x2.splat(double v) {
-    return _Float64x2Splat(v);
-  }
-
   @pragma("vm:recognized", "other")
   @pragma("vm:exact-result-type", _Float64x2)
   @pragma("vm:external-name", "Float64x2_splat")
   external static _Float64x2 _Float64x2Splat(double v);
-
-  @patch
-  @pragma("vm:recognized", "other")
-  @pragma("vm:exact-result-type", _Float64x2)
-  @pragma("vm:external-name", "Float64x2_zero")
-  external factory Float64x2.zero();
 
   @patch
   @pragma("vm:recognized", "other")
@@ -4176,6 +4163,20 @@ class Float64x2 {
 @pragma('vm:deeply-immutable')
 @pragma("vm:entry-point")
 final class _Float64x2 implements Float64x2 {
+  // Const constructors with empty bodies. The CFE special-cases compile-time
+  // calls and emits a `Float64x2Constant(x, y)` kernel constant whose VM
+  // materializer calls `Float64x2::New(x, y)` directly. **POC limitation:**
+  // non-const invocations (e.g. `Float64x2(runtimeX, runtimeY)`) currently
+  // produce instances with uninitialized lanes because the const ctor has no
+  // body and no Dart fields to assign to. Aligning the storage end-to-end so
+  // both call paths populate `UntaggedFloat64x2.value_[2]` requires further
+  // VM work (Dart-level unboxed double fields whose offsets coincide with
+  // the C++ struct).
+  const _Float64x2._(double x, double y);
+  const _Float64x2.splat(double v);
+  const _Float64x2.zero();
+
+
   @pragma("vm:recognized", "graph-intrinsic")
   @pragma("vm:external-name", "Float64x2_add")
   external Float64x2 operator +(Float64x2 other);

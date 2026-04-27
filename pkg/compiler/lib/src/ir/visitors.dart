@@ -411,6 +411,28 @@ class ConstantValuefier extends ir.ComputeOnceConstantVisitor<ConstantValue> {
       _unexpectedConstant(node);
 
   @override
-  Never visitAuxiliaryConstant(ir.AuxiliaryConstant node) =>
-      _unexpectedConstant(node);
+  ConstantValue visitAuxiliaryConstant(ir.AuxiliaryConstant node) {
+    if (node is ir.Float64x2Constant) {
+      // Lower to an InstanceConstant of dart:typed_data's `_Float64x2`
+      // (added via the dart2js patch of dart:typed_data) and recurse.
+      final cls = elementMap.coreTypes.index
+          .tryGetClass('dart:typed_data', '_Float64x2Naive');
+      if (cls != null) {
+        ir.Field? xField;
+        ir.Field? yField;
+        for (final f in cls.fields) {
+          if (f.name.text == 'x') xField = f;
+          if (f.name.text == 'y') yField = f;
+        }
+        if (xField != null && yField != null) {
+          final instance = ir.InstanceConstant(cls.reference, const [], {
+            xField.fieldReference: ir.DoubleConstant(node.x),
+            yField.fieldReference: ir.DoubleConstant(node.y),
+          });
+          return visitConstant(instance);
+        }
+      }
+    }
+    _unexpectedConstant(node);
+  }
 }

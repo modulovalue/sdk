@@ -2643,6 +2643,10 @@ class _TreeShakerConstantVisitor implements ConstantVisitor<void> {
 
   @override
   visitAuxiliaryConstant(AuxiliaryConstant constant) {
+    if (constant is Float64x2Constant) {
+      // Leaf constant; no children to traverse.
+      return;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant "
       "${constant} (${constant.runtimeType}).",
@@ -2726,6 +2730,10 @@ class _ConstantTreeShaker implements ConstantVisitor<Constant> {
 
   @override
   Constant visitAuxiliaryConstant(AuxiliaryConstant constant) {
+    if (constant is Float64x2Constant) {
+      // Leaf constant; nothing to rewrite.
+      return constant;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant "
       "${constant} (${constant.runtimeType}).",

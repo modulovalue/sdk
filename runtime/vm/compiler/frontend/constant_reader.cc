@@ -291,6 +291,12 @@ InstancePtr ConstantReader::ReadConstantInternal(intptr_t constant_index) {
     case kDoubleConstant:
       instance = Double::New(reader.ReadDouble(), Heap::kOld);
       break;
+    case kFloat64x2Constant: {
+      const double cx = reader.ReadDouble();
+      const double cy = reader.ReadDouble();
+      instance = Float64x2::New(cx, cy, Heap::kOld);
+      break;
+    }
     case kStringConstant:
       instance = H.DartSymbolPlain(reader.ReadStringReference()).ptr();
       break;

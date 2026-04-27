@@ -9200,7 +9200,28 @@ class LibraryCompiler extends ComputeOnceConstantVisitor<js_ast.Expression>
   // DDC does not currently use the non-primitive constant nodes; rather these
   // are emitted via their normal expression nodes.
   @override
-  js_ast.Expression defaultConstant(Constant node) => _emitInvalidNode(node);
+  js_ast.Expression defaultConstant(Constant node) {
+    if (node is Float64x2Constant) {
+      final cls = _coreTypes.index
+          .tryGetClass('dart:typed_data', '_Float64x2Naive');
+      if (cls != null) {
+        Field? xField;
+        Field? yField;
+        for (final f in cls.fields) {
+          if (f.name.text == 'x') xField = f;
+          if (f.name.text == 'y') yField = f;
+        }
+        if (xField != null && yField != null) {
+          final instance = InstanceConstant(cls.reference, const [], {
+            xField.fieldReference: DoubleConstant(node.x),
+            yField.fieldReference: DoubleConstant(node.y),
+          });
+          return visitConstant(instance);
+        }
+      }
+    }
+    return _emitInvalidNode(node);
+  }
 
   @override
   js_ast.Expression visitSymbolConstant(SymbolConstant node) =>

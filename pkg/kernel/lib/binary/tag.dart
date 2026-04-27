@@ -250,6 +250,7 @@ abstract class ConstantTag {
   static const int ConstructorTearOffConstant = 15;
   static const int RedirectingFactoryTearOffConstant = 16;
   static const int RecordConstant = 17;
+  static const int Float64x2Constant = 18;
 }
 
 const int sdkHashLength = 10; // Bytes, a Git "short hash".

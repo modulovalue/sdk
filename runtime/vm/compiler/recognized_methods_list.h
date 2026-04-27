@@ -497,7 +497,7 @@ namespace dart {
   V(TypedDataLibrary, _Float32x4, _withW, Float32x4WithW, 0xd3567bb9)          \
   V(TypedDataLibrary, Float64x2, _Float64x2FromDoubles, Float64x2FromDoubles,  \
     0x7d1f258d)                                                                \
-  V(TypedDataLibrary, Float64x2, Float64x2.zero, Float64x2Zero, 0x82777158)    \
+  V(TypedDataLibrary, _Float64x2, _Float64x2.zero, Float64x2Zero, 0x00000000)  \
   V(TypedDataLibrary, Float64x2, _Float64x2Splat, Float64x2Splat, 0x3d21f386)  \
   V(TypedDataLibrary, Float64x2, Float64x2.fromFloat32x4,                      \
     Float32x4ToFloat64x2, 0x6e8a84a6)                                          \

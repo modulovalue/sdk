@@ -3342,6 +3342,20 @@ class ConstantAllocationCollector implements ConstantVisitor<Type> {
 
   @override
   Type visitAuxiliaryConstant(AuxiliaryConstant constant) {
+    if (constant is Float64x2Constant) {
+      // Float64x2Constant materializes (per backend) as an instance of the
+      // concrete `_Float64x2` impl class living in dart:typed_data. Mark
+      // that class as allocated so TFA keeps its operators / getters live.
+      final cls = summaryCollector._environment.coreTypes.index
+          .tryGetClass('dart:typed_data', '_Float64x2');
+      if (cls != null) {
+        return summaryCollector._entryPointsListener
+            .addAllocatedClass(cls)
+            .cls
+            .concreteType;
+      }
+      return anyInstanceType;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant "
       "${constant} (${constant.runtimeType}).",

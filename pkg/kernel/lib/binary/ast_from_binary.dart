@@ -414,6 +414,8 @@ class BinaryBuilder {
         return _readStringConstant();
       case ConstantTag.SymbolConstant:
         return _readSymbolConstant();
+      case ConstantTag.Float64x2Constant:
+        return _readFloat64x2Constant();
       case ConstantTag.MapConstant:
         return _readMapConstant();
       case ConstantTag.ListConstant:
@@ -466,6 +468,12 @@ class BinaryBuilder {
   Constant _readSymbolConstant() {
     Reference? libraryReference = readNullableLibraryReference();
     return new SymbolConstant(readStringReference(), libraryReference);
+  }
+
+  Constant _readFloat64x2Constant() {
+    final double x = readDouble();
+    final double y = readDouble();
+    return new Float64x2Constant(x, y);
   }
 
   Constant _readMapConstant() {

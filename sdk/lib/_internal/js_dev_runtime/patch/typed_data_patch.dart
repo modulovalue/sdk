@@ -179,12 +179,18 @@ class Int32x4 {
 
 @patch
 class Float64x2 {
-  @patch
-  factory Float64x2(double x, double y) = NativeFloat64x2;
-  @patch
-  factory Float64x2.splat(double v) = NativeFloat64x2.splat;
-  @patch
-  factory Float64x2.zero() = NativeFloat64x2.zero;
+  // The unnamed factory, splat, and zero are `const` in dart:typed_data and
+  // redirect to `_Float64x2._/.splat/.zero` defined below.
   @patch
   factory Float64x2.fromFloat32x4(Float32x4 v) = NativeFloat64x2.fromFloat32x4;
+}
+
+/// DDC's redirect target for `const factory Float64x2(...) = _Float64x2._;`.
+/// Inherits the entire pure-Dart implementation from `_Float64x2Naive` (in
+/// `dart:typed_data`); this stub exists only so the public class's redirect
+/// target name resolves on this backend.
+final class _Float64x2 extends _Float64x2Naive {
+  const _Float64x2._(double x, double y) : super._(x, y);
+  const _Float64x2.splat(double v) : super.splat(v);
+  const _Float64x2.zero() : super.zero();
 }

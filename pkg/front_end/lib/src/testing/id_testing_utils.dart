@@ -705,6 +705,10 @@ class ConstantToTextVisitor implements ConstantVisitor<void> {
 
   @override
   bool visitAuxiliaryConstant(AuxiliaryConstant node) {
+    if (node is Float64x2Constant) {
+      sb.write('Float64x2(${node.x},${node.y})');
+      return false;
+    }
     throw new UnsupportedError(
       "Unsupported auxiliary constant ${node} (${node.runtimeType}).",
     );

@@ -16,6 +16,15 @@ mixin KernelNodes {
   // dart:_internal classes
   late final Class symbolClass = index.getClass("dart:_internal", "Symbol");
 
+  // The shared pure-Dart impl class declared in dart:typed_data, used to
+  // materialize the `Float64x2Constant` kernel kind on backends that don't
+  // have native SIMD storage (dart2wasm here; dart2js / DDC follow the same
+  // pattern).
+  late final Class wasmFloat64x2Class = index.getClass(
+    "dart:typed_data",
+    "_Float64x2Naive",
+  );
+
   // dart:_js_types classes
   late final Class jsStringClass = index.getClass(
     "dart:_string",

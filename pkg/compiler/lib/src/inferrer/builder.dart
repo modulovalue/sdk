@@ -2873,8 +2873,14 @@ class TypeInformationConstantVisitor
       _unexpectedConstant(node);
 
   @override
-  Never visitAuxiliaryConstant(ir.AuxiliaryConstant node) =>
-      _unexpectedConstant(node);
+  TypeInformation visitAuxiliaryConstant(ir.AuxiliaryConstant node) {
+    if (node is ir.Float64x2Constant) {
+      // Float64x2Constant materializes as a `_Float64x2` instance.
+      // Without a precise dart2js type entity here we report dynamic.
+      return builder._inferrer.types.dynamicType;
+    }
+    _unexpectedConstant(node);
+  }
 }
 
 class Refinement {

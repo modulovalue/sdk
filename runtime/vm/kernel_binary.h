@@ -210,6 +210,7 @@ enum ConstantTag {
   kConstructorTearOffConstant = 15,
   kRedirectingFactoryTearOffConstant = 16,
   kRecordConstant = 17,
+  kFloat64x2Constant = 18,
 };
 
 // Keep in sync with package:kernel/lib/ast.dart

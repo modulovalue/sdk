@@ -1500,6 +1500,27 @@ class ConstantCreator extends ConstantVisitor<ConstantInfo?>
 
   @override
   ConstantInfo? visitAuxiliaryConstant(AuxiliaryConstant constant) {
+    if (constant is Float64x2Constant) {
+      // Lower to an InstanceConstant of dart2wasm's `_Float64x2` with its
+      // `x` and `y` fields populated, then delegate to the regular
+      // InstanceConstant materialization.
+      final cls = translator.wasmFloat64x2Class;
+      Field? xField;
+      Field? yField;
+      for (final f in cls.fields) {
+        if (f.name.text == 'x') xField = f;
+        if (f.name.text == 'y') yField = f;
+      }
+      if (xField == null || yField == null) {
+        throw UnsupportedError(
+            '_Float64x2 is missing expected `x`/`y` fields.');
+      }
+      final instance = InstanceConstant(cls.reference, const [], {
+        xField.fieldReference: DoubleConstant(constant.x),
+        yField.fieldReference: DoubleConstant(constant.y),
+      });
+      return ensureConstant(instance);
+    }
     if (constant is DummyValueConstant) {
       final type = constant.type;
 
@@ -1633,6 +1654,9 @@ class TypeOfConstantVisitor extends ConstantVisitor<w.RefType>
 
   @override
   w.RefType visitAuxiliaryConstant(AuxiliaryConstant constant) {
+    if (constant is Float64x2Constant) {
+      return _typeOfClass(translator.wasmFloat64x2Class);
+    }
     if (constant is DummyValueConstant) {
       return w.RefType(constant.type, nullable: false);
     }
