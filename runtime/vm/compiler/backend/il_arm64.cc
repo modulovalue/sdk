@@ -4535,6 +4535,33 @@ void UnarySmiOpInstr::EmitNativeCode(FlowGraphCompiler* compiler) {
       __ LslImmediate(result, result, kSmiTagShift);
       break;
     }
+    case Token::kCTZ: {
+      // Untag, RBIT + CLZ for trailing-zero count, retag. RBIT(0) = 0 and
+      // CLZ(0) = 64, so the zero-input case naturally returns the platform
+      // width (matching the Dart API contract).
+      __ AsrImmediate(result, value, kSmiTagShift);
+      __ rbit(result, result);
+      __ clz(result, result);
+      __ LslImmediate(result, result, kSmiTagShift);
+      break;
+    }
+    case Token::kBITLENGTH: {
+      // bitLength = number of bits required to store this integer, with the
+      // sign bit removed. Equivalent to the position of the highest bit
+      // that disagrees with the sign bit, plus one. Implemented as:
+      //   mirror = value XOR (value ASR 63)   // flip bits if negative
+      //   result = 64 - CLZ(mirror)           // 0 maps to 0, since CLZ(0)=64
+      // Operates on the untagged 64-bit Smi; result is small (0..63) and
+      // fits as a Smi after retag.
+      const Register tmp = TMP;
+      __ AsrImmediate(tmp, value, kSmiTagShift);
+      __ eor(tmp, tmp, compiler::Operand(tmp, ASR, 63));
+      __ clz(tmp, tmp);
+      __ LoadImmediate(result, 64);
+      __ sub(result, result, compiler::Operand(tmp));
+      __ LslImmediate(result, result, kSmiTagShift);
+      break;
+    }
     default:
       UNREACHABLE();
   }

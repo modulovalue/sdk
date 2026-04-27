@@ -249,29 +249,6 @@ void AsmIntrinsifier::Integer_equal(Assembler* assembler,
   Integer_equalToInteger(assembler, normal_ir_body);
 }
 
-// Argument is Smi (receiver).
-void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
-                                    Label* normal_ir_body) {
-  ASSERT(kSmiTagShift == 1);
-  __ movl(EAX, Address(ESP, +1 * target::kWordSize));  // Receiver.
-  // XOR with sign bit to complement bits if value is negative.
-  __ movl(ECX, EAX);
-  __ sarl(ECX, Immediate(31));  // All 0 or all 1.
-  __ xorl(EAX, ECX);
-  // BSR does not write the destination register if source is zero.  Put a 1 in
-  // the Smi tag bit to ensure BSR writes to destination register.
-  __ orl(EAX, Immediate(kSmiTagMask));
-  __ bsrl(EAX, EAX);
-  __ SmiTag(EAX);
-  __ ret();
-}
-
-void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
-                                               Label* normal_ir_body) {
-  // Not yet intrinsified on IA32. Fall back to the C++ native.
-  __ jmp(normal_ir_body);
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

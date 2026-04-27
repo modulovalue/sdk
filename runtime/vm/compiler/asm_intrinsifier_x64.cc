@@ -164,46 +164,6 @@ void AsmIntrinsifier::Integer_equal(Assembler* assembler,
   Integer_equalToInteger(assembler, normal_ir_body);
 }
 
-void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
-                                    Label* normal_ir_body) {
-  ASSERT(kSmiTagShift == 1);
-  __ movq(RAX, Address(RSP, +1 * target::kWordSize));  // Index.
-#if defined(DART_COMPRESSED_POINTERS)
-  __ movsxd(RAX, RAX);
-#endif
-  // XOR with sign bit to complement bits if value is negative.
-  __ movq(RCX, RAX);
-  __ sarq(RCX, Immediate(63));  // All 0 or all 1.
-  __ OBJ (xor)(RAX, RCX);
-  // BSR does not write the destination register if source is zero.  Put a 1 in
-  // the Smi tag bit to ensure BSR writes to destination register.
-  __ orq(RAX, Immediate(kSmiTagMask));
-  __ bsrq(RAX, RAX);
-  __ SmiTag(RAX);
-  __ ret();
-}
-
-void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
-                                               Label* normal_ir_body) {
-  ASSERT(kSmiTagShift == 1);
-  __ movq(RAX, Address(RSP, +1 * target::kWordSize));
-#if defined(DART_COMPRESSED_POINTERS)
-  __ movsxd(RAX, RAX);
-#endif
-  __ SmiUntag(RAX);
-  Label zero, done;
-  __ testq(RAX, RAX);
-  __ j(ZERO, &zero);
-  // BSF: position of lowest set bit. Equivalent to ctz when input is nonzero.
-  __ bsfq(RAX, RAX);
-  __ jmp(&done);
-  __ Bind(&zero);
-  __ movq(RAX, Immediate(64));
-  __ Bind(&done);
-  __ SmiTag(RAX);
-  __ ret();
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

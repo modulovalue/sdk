@@ -62,6 +62,8 @@ namespace dart {
                                                                                \
   /* Bit-counting (no surface syntax; recognized intrinsic ops). */            \
   TOK(kPOPCNT, "@popcnt", 0, kNoAttribute)                                     \
+  TOK(kCTZ, "@ctz", 0, kNoAttribute)                                           \
+  TOK(kBITLENGTH, "@bitlength", 0, kNoAttribute)                               \
                                                                                \
   /* Shift operators. */                                                       \
   TOK(kSHL, "<<", 12, kNoAttribute)                                            \

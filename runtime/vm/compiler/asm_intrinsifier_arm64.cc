@@ -153,42 +153,6 @@ void AsmIntrinsifier::Integer_equal(Assembler* assembler,
   Integer_equalToInteger(assembler, normal_ir_body);
 }
 
-void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
-                                    Label* normal_ir_body) {
-  __ ldr(R0, Address(SP, 0 * target::kWordSize));
-  __ SmiUntag(R0);
-  // XOR with sign bit to complement bits if value is negative.
-#if !defined(DART_COMPRESSED_POINTERS)
-  __ eor(R0, R0, Operand(R0, ASR, 63));
-  __ clz(R0, R0);
-  __ LoadImmediate(R1, 64);
-#else
-  __ eorw(R0, R0, Operand(R0, ASR, 31));
-  __ clzw(R0, R0);
-  __ LoadImmediate(R1, 32);
-#endif
-  __ sub(R0, R1, Operand(R0));
-  __ SmiTag(R0);
-  __ ret();
-}
-
-void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
-                                               Label* normal_ir_body) {
-#if defined(DART_COMPRESSED_POINTERS)
-  __ b(normal_ir_body);
-#else
-  __ ldr(R0, Address(SP, 0 * target::kWordSize));
-  __ SmiUntag(R0);
-  // Reverse bits then count leading zeros to get trailing zero count.
-  // For zero input, RBIT(0) = 0 and CLZ(0) = 64, which matches the Dart
-  // API contract (zero returns the platform width).
-  __ rbit(R0, R0);
-  __ clz(R0, R0);
-  __ SmiTag(R0);
-  __ ret();
-#endif
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

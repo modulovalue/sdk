@@ -656,6 +656,22 @@ bool GraphIntrinsifier::Build_Smi_oneBitCount(FlowGraph* flow_graph) {
 #endif
 }
 
+bool GraphIntrinsifier::Build_Smi_trailingZeroBitCount(FlowGraph* flow_graph) {
+#if defined(TARGET_ARCH_ARM64) && !defined(DART_COMPRESSED_POINTERS)
+  return BuildUnarySmiOp(flow_graph, Token::kCTZ);
+#else
+  return false;
+#endif
+}
+
+bool GraphIntrinsifier::Build_Smi_bitLength(FlowGraph* flow_graph) {
+#if defined(TARGET_ARCH_ARM64) && !defined(DART_COMPRESSED_POINTERS)
+  return BuildUnarySmiOp(flow_graph, Token::kBITLENGTH);
+#else
+  return false;
+#endif
+}
+
 static bool BuildBinarySmiOp(FlowGraph* flow_graph, Token::Kind op_kind) {
   ASSERT(!flow_graph->function().has_unboxed_return());
   ASSERT(!flow_graph->function().is_unboxed_parameter_at(0));

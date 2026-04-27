@@ -149,29 +149,6 @@ void AsmIntrinsifier::Integer_equal(Assembler* assembler,
   Integer_equalToInteger(assembler, normal_ir_body);
 }
 
-void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
-                                    Label* normal_ir_body) {
-  __ lx(A0, Address(SP, 0 * target::kWordSize));
-  __ SmiUntag(A0);
-
-  // XOR with sign bit to complement bits if value is negative.
-  __ srai(A1, A0, XLEN - 1);
-  __ xor_(A0, A0, A1);
-
-  __ CountLeadingZeroes(A0, A0);
-
-  __ li(TMP, XLEN);
-  __ sub(A0, TMP, A0);
-  __ SmiTag(A0);
-  __ ret();
-}
-
-void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
-                                               Label* normal_ir_body) {
-  // Not yet intrinsified on RISC-V. Fall back to the C++ native.
-  __ j(normal_ir_body);
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List src_digits, int src_used,
   //                  int shift_amount,

@@ -525,12 +525,12 @@ final class _Smi extends _IntegerImplementation {
   @pragma("vm:disable-unboxed-parameters")
   @pragma("vm:external-name", "Smi_bitNegate")
   external int operator ~();
-  @pragma("vm:recognized", "asm-intrinsic")
+  @pragma("vm:recognized", "graph-intrinsic")
   @pragma("vm:exact-result-type", "dart:core#_Smi")
   @pragma("vm:external-name", "Smi_bitLength")
   external int get bitLength;
 
-  @pragma("vm:recognized", "asm-intrinsic")
+  @pragma("vm:recognized", "graph-intrinsic")
   @pragma("vm:exact-result-type", "dart:core#_Smi")
   @pragma("vm:external-name", "Smi_trailingZeroBitCount")
   external int get trailingZeroBitCount;

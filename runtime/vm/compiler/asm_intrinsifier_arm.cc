@@ -243,24 +243,6 @@ void AsmIntrinsifier::Integer_equal(Assembler* assembler,
   Integer_equalToInteger(assembler, normal_ir_body);
 }
 
-void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
-                                    Label* normal_ir_body) {
-  __ ldr(R0, Address(SP, 0 * target::kWordSize));
-  __ SmiUntag(R0);
-  // XOR with sign bit to complement bits if value is negative.
-  __ eor(R0, R0, Operand(R0, ASR, 31));
-  __ clz(R0, R0);
-  __ rsb(R0, R0, Operand(32));
-  __ SmiTag(R0);
-  __ Ret();
-}
-
-void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
-                                               Label* normal_ir_body) {
-  // Not yet intrinsified on ARM. Fall back to the C++ native.
-  __ b(normal_ir_body);
-}
-
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)
