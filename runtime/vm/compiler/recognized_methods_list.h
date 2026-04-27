@@ -537,6 +537,9 @@ namespace dart {
 // (library, class-name, function-name, intrinsification method, fingerprint).
 #define ASM_INTRINSICS_LIST(V)                                                 \
   V(CoreLibrary, _Smi, get:bitLength, Smi_bitLength, 0x7a97f52b)               \
+  V(CoreLibrary, _Smi, get:trailingZeroBitCount, Smi_trailingZeroBitCount,     \
+    0x00000000)                                                                \
+  V(CoreLibrary, _Smi, get:oneBitCount, Smi_oneBitCount, 0x00000000)           \
   V(CoreLibrary, _BigIntImpl, _lsh, Bigint_lsh, 0x3fc5ff22)                    \
   V(CoreLibrary, _BigIntImpl, _rsh, Bigint_rsh, 0xddf6be5f)                    \
   V(CoreLibrary, _BigIntImpl, _absAdd, Bigint_absAdd, 0x2aa56271)              \

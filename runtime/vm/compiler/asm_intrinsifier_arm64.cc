@@ -172,6 +172,43 @@ void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
   __ ret();
 }
 
+void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
+                                               Label* normal_ir_body) {
+#if defined(DART_COMPRESSED_POINTERS)
+  __ b(normal_ir_body);
+#else
+  __ ldr(R0, Address(SP, 0 * target::kWordSize));
+  __ SmiUntag(R0);
+  // Reverse bits then count leading zeros to get trailing zero count.
+  // For zero input, RBIT(0) = 0 and CLZ(0) = 64, which matches the Dart
+  // API contract (zero returns the platform width).
+  __ rbit(R0, R0);
+  __ clz(R0, R0);
+  __ SmiTag(R0);
+  __ ret();
+#endif
+}
+
+void AsmIntrinsifier::Smi_oneBitCount(Assembler* assembler,
+                                      Label* normal_ir_body) {
+#if defined(DART_COMPRESSED_POINTERS)
+  __ b(normal_ir_body);
+#else
+  __ ldr(R0, Address(SP, 0 * target::kWordSize));
+  __ SmiUntag(R0);
+  // ARMv8 has no scalar popcount. Move the 64-bit value into a NEON
+  // register, count bits per byte with CNT, then sum the 8 lanes with
+  // UADDLV. For negative values the two's-complement bit pattern is what
+  // we want to count.
+  __ fmovdr(V0, R0);
+  __ vcnt(V0, V0);
+  __ vuaddlv(V0, V0);
+  __ fmovrs(R0, V0);
+  __ SmiTag(R0);
+  __ ret();
+#endif
+}
+
 void AsmIntrinsifier::Bigint_lsh(Assembler* assembler, Label* normal_ir_body) {
   // static void _lsh(Uint32List x_digits, int x_used, int n,
   //                  Uint32List r_digits)

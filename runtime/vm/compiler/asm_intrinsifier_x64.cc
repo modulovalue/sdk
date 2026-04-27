@@ -10,6 +10,7 @@
 #include "vm/class_id.h"
 #include "vm/compiler/asm_intrinsifier.h"
 #include "vm/compiler/assembler/assembler.h"
+#include "vm/cpu.h"
 
 namespace dart {
 namespace compiler {
@@ -178,6 +179,44 @@ void AsmIntrinsifier::Smi_bitLength(Assembler* assembler,
   // the Smi tag bit to ensure BSR writes to destination register.
   __ orq(RAX, Immediate(kSmiTagMask));
   __ bsrq(RAX, RAX);
+  __ SmiTag(RAX);
+  __ ret();
+}
+
+void AsmIntrinsifier::Smi_trailingZeroBitCount(Assembler* assembler,
+                                               Label* normal_ir_body) {
+  ASSERT(kSmiTagShift == 1);
+  __ movq(RAX, Address(RSP, +1 * target::kWordSize));
+#if defined(DART_COMPRESSED_POINTERS)
+  __ movsxd(RAX, RAX);
+#endif
+  __ SmiUntag(RAX);
+  Label zero, done;
+  __ testq(RAX, RAX);
+  __ j(ZERO, &zero);
+  // BSF: position of lowest set bit. Equivalent to ctz when input is nonzero.
+  __ bsfq(RAX, RAX);
+  __ jmp(&done);
+  __ Bind(&zero);
+  __ movq(RAX, Immediate(64));
+  __ Bind(&done);
+  __ SmiTag(RAX);
+  __ ret();
+}
+
+void AsmIntrinsifier::Smi_oneBitCount(Assembler* assembler,
+                                      Label* normal_ir_body) {
+  if (!TargetCPUFeatures::popcnt_supported()) {
+    __ jmp(normal_ir_body);
+    return;
+  }
+  ASSERT(kSmiTagShift == 1);
+  __ movq(RAX, Address(RSP, +1 * target::kWordSize));
+#if defined(DART_COMPRESSED_POINTERS)
+  __ movsxd(RAX, RAX);
+#endif
+  __ SmiUntag(RAX);
+  __ popcntq(RAX, RAX);
   __ SmiTag(RAX);
   __ ret();
 }
