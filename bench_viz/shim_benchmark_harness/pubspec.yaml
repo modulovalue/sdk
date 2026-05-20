@@ -1,0 +1,6 @@
+name: benchmark_harness
+description: Drop-in shim that captures per-sample timings via $BENCH_VIZ_OUT.
+version: 2.4.0
+publish_to: none
+environment:
+  sdk: ^3.4.0
