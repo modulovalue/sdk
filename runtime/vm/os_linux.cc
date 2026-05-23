@@ -228,7 +228,11 @@ class JitDumpCodeObserver : public CodeObserver {
     ev.size = sizeof(ev) + (name_length + 1) + size;
     ev.time_stamp = OS::GetCurrentMonotonicTicks();
     ev.process_id = getpid();
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+    ev.thread_id = 0;
+#else
     ev.thread_id = syscall(SYS_gettid);
+#endif
     ev.vma = base;
     ev.code_address = base;
     ev.code_size = size;
@@ -638,6 +642,12 @@ DART_NOINLINE uintptr_t OS::GetProgramCounter() {
       __builtin_extract_return_addr(__builtin_return_address(0)));
 }
 
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+// Forward declarations of capture hooks defined in the JS-facing wrapper.
+extern "C" int dart_il_capture_active();
+extern "C" void dart_il_capture_append(const char* s, int n);
+#endif
+
 void OS::Print(const char* format, ...) {
   va_list args;
   va_start(args, format);
@@ -646,6 +656,21 @@ void OS::Print(const char* format, ...) {
 }
 
 void OS::VFPrint(FILE* stream, const char* format, va_list args) {
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+  if (dart_il_capture_active()) {
+    va_list measure;
+    va_copy(measure, args);
+    int len = vsnprintf(nullptr, 0, format, measure);
+    va_end(measure);
+    if (len > 0) {
+      char* buf = static_cast<char*>(malloc(len + 1));
+      vsnprintf(buf, len + 1, format, args);
+      dart_il_capture_append(buf, len);
+      free(buf);
+    }
+    return;
+  }
+#endif
   vfprintf(stream, format, args);
   fflush(stream);
 }

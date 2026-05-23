@@ -138,6 +138,13 @@
 #elif defined(__Fuchsia__)
 #define DART_HOST_OS_FUCHSIA
 
+#elif defined(__EMSCRIPTEN__)
+// Emscripten provides a Linux-flavored libc surface; treat it as Linux for
+// host OS purposes. DART_HOST_OS_EMSCRIPTEN is also defined so platform shims
+// can branch on the wasm host where genuinely needed.
+#define DART_HOST_OS_LINUX 1
+#define DART_HOST_OS_EMSCRIPTEN 1
+
 #elif !defined(DART_HOST_OS_FUCHSIA)
 #error Automatic target os detection failed.
 #endif
@@ -225,6 +232,15 @@ struct simd128_value_t {
 #else
 #error Unknown XLEN
 #endif
+#elif defined(__wasm32__) || (defined(__EMSCRIPTEN__) && __SIZEOF_POINTER__ == 4)
+// Treat wasm32 as a 32-bit host. There's no Dart target arch for wasm; the
+// build is meant to drive the optimizer pipeline to produce IL, not to run
+// generated code. We pretend to be IA32 for sizing purposes.
+#define HOST_ARCH_IA32 1
+#define ARCH_IS_32_BIT 1
+#elif defined(__wasm64__) || (defined(__EMSCRIPTEN__) && __SIZEOF_POINTER__ == 8)
+#define HOST_ARCH_X64 1
+#define ARCH_IS_64_BIT 1
 #else
 #error Architecture was not detected as supported by Dart.
 #endif

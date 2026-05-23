@@ -4,6 +4,7 @@
 # Even though these imports aren't used directly, they are required so
 # that the template works when it is called.
 import("//build/toolchain/android/android_toolchain.gni")
+import("//build/toolchain/emcc_toolchain.gni")
 import("//build/toolchain/gcc_toolchain.gni")
 if (host_os == "mac") {
   import("//build/toolchain/mac/mac_toolchain.gni")

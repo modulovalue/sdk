@@ -223,6 +223,17 @@ if (current_os == "win") {
   is_posix = true
   is_watchos = false
   is_win = false
+} else if (current_os == "wasm") {
+  is_android = false
+  is_chromeos = false
+  is_fuchsia = false
+  is_ios = false
+  is_linux = false
+  is_mac = false
+  is_nacl = false
+  is_posix = true
+  is_watchos = false
+  is_win = false
 } else if (current_os == "ios") {
   is_android = false
   is_chromeos = false
@@ -495,6 +506,15 @@ if (is_win) {
   } else {
     assert(false, "Unknown host for fuchsia cross compile")
   }
+} else if (current_os == "wasm") {
+  if (host_os == "mac") {
+    host_toolchain = "//build/toolchain/mac:clang_$host_cpu"
+  } else if (host_os == "linux") {
+    host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
+  } else {
+    assert(false, "Unsupported host_os for wasm cross compile")
+  }
+  set_default_toolchain("//build/toolchain/wasm:wasm")
 }
 
 # Sets default dependencies for executable and loadable_module targets.

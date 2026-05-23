@@ -15,7 +15,8 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
+#if (defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)) &&          \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
 #include <sys/prctl.h>
 #endif
 
@@ -95,6 +96,17 @@ static void Unmap(uword start, uword end) {
     return;
   }
 
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+  // On Emscripten, regions allocated via aligned_alloc are released through
+  // free() rather than munmap. We can't tell here which is which from a raw
+  // address, so we leak slack regions (intentional in this build — slack
+  // unmapping is only needed for over-allocate-and-trim alignment, which we
+  // bypass via aligned_alloc above) and only call free for sizes that match
+  // a known allocation. The simplest correct thing for our use case is to
+  // leak; the IL extractor process is short-lived.
+  (void)start;
+  return;
+#else
   if (munmap(reinterpret_cast<void*>(start), size) != 0) {
     int error = errno;
     const int kBufferSize = 1024;
@@ -102,6 +114,7 @@ static void Unmap(uword start, uword end) {
     FATAL("munmap failed: %d (%s)", error,
           Utils::StrError(error, error_buf, kBufferSize));
   }
+#endif
 }
 
 static void* GenericMapAligned(void* hint,
@@ -110,6 +123,15 @@ static void* GenericMapAligned(void* hint,
                                intptr_t alignment,
                                intptr_t allocated_size,
                                int map_flags) {
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+  // Emscripten's mmap is malloc-backed and doesn't support partial munmap of
+  // the slack used by the aligned-overallocate trick below. Use aligned_alloc
+  // for a precisely-sized region instead. PROT_EXEC is irrelevant in wasm.
+  // C11 requires size to be a multiple of alignment; round up.
+  intptr_t aligned_size = (size + alignment - 1) & ~(alignment - 1);
+  void* aligned = aligned_alloc(alignment, aligned_size);
+  return aligned;
+#endif
 #if defined(DART_HOST_OS_MACOS) && !defined(USING_THREAD_SANITIZER)
   // Allocate aligned memory in one step when possible.
   // vm_map doesn't support MAP_JIT.
@@ -710,7 +732,8 @@ VirtualMemory* VirtualMemory::AllocateAligned(intptr_t size,
   }
 #endif  // defined(DART_ENABLE_RX_WORKAROUNDS)
 
-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
+#if (defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)) &&          \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
   // PR_SET_VMA was only added to mainline Linux in 5.17, and some versions of
   // the Android NDK have incorrect headers, so we manually define it if absent.
 #if !defined(PR_SET_VMA)
@@ -829,6 +852,10 @@ void VirtualMemory::Protect(void* address, intptr_t size, Protection mode) {
       prot = PROT_READ | PROT_WRITE | PROT_EXEC;
       break;
   }
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+  // Emscripten has no protected memory: everything is RW always. Drop the call.
+  (void)page_address; (void)end_address; (void)prot;
+#else
   if (mprotect(reinterpret_cast<void*>(page_address),
                end_address - page_address, prot) != 0) {
     int error = errno;
@@ -839,6 +866,7 @@ void VirtualMemory::Protect(void* address, intptr_t size, Protection mode) {
     FATAL("mprotect failed: %d (%s)", error,
           Utils::StrError(error, error_buf, kBufferSize));
   }
+#endif
   LOG_INFO("mprotect(0x%" Px ", 0x%" Px ", %u) ok\n", page_address,
            end_address - page_address, prot);
 }

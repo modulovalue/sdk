@@ -66,6 +66,7 @@ static void UnblockSIGPROF() {
 // is used to ensure that the thread is properly destroyed if the thread just
 // exits.
 static void* ThreadStart(void* data_ptr) {
+#if !defined(DART_HOST_OS_EMSCRIPTEN)
   if (FLAG_worker_thread_priority != kMinInt) {
     if (setpriority(PRIO_PROCESS, syscall(__NR_gettid),
                     FLAG_worker_thread_priority) == -1) {
@@ -73,6 +74,7 @@ static void* ThreadStart(void* data_ptr) {
             FLAG_worker_thread_priority, errno);
     }
   }
+#endif
 
   ThreadStartData* data = reinterpret_cast<ThreadStartData*>(data_ptr);
 
@@ -132,7 +134,13 @@ intptr_t OSThread::GetMaxStackSize() {
 
 #ifdef SUPPORT_TIMELINE
 ThreadId OSThread::GetCurrentThreadTraceId() {
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+  // Emscripten has no thread IDs in the Linux-syscall sense. Return a stable
+  // sentinel; the IL viewer doesn't use timelines.
+  return 0;
+#else
   return syscall(__NR_gettid);
+#endif
 }
 #endif  // SUPPORT_TIMELINE
 

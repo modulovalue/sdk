@@ -7,7 +7,7 @@
 /// used by patches of that library. We plan to change this when we have a
 /// shared front end and simply use parts.
 
-import "dart:async" show Timer;
+import "dart:async" show Timer, scheduleMicrotask;
 import "dart:core" hide Symbol;
 import "dart:ffi" show Pointer, Struct, Union, IntPtr, Handle, Void, Native;
 import "dart:isolate" show SendPort;

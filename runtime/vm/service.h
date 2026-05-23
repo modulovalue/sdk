@@ -134,6 +134,17 @@ class Service : public AllStatic {
   // Handles a message which is directed to a particular isolate.
   static ErrorPtr HandleIsolateMessage(Isolate* isolate, const Array& message);
 
+  // Synchronously invoke a Service RPC method on the current isolate and
+  // return the JSON-RPC response bytes. The caller owns the returned buffer
+  // and must free it with free(). Returns nullptr if the method is unknown
+  // or no isolate is current. Used for in-process embedders that want to
+  // talk to the VM Service Protocol without standing up a service isolate
+  // (no ports, no threads, no WebSocket — straight call).
+  static char* InvokeRpcSync(const char* method_name,
+                             const char** param_keys,
+                             const char** param_values,
+                             intptr_t num_params);
+
   static void HandleEvent(ServiceEvent* event, bool enter_safepoint = true);
 
   static void RegisterIsolateEmbedderCallback(

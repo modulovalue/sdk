@@ -326,9 +326,17 @@ class MetadataEvaluator : public KernelReaderHelper {
         variable_declaration_helper.ReadUntilExcluding(
             VariableDeclarationHelper::kAnnotations);
       } else {
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+        // In the wasm embedder, kernels reloaded from in-browser CFE include
+        // metadata sections that point at expression-node offsets the
+        // reloader's annotation evaluator doesn't recognize (e.g. pattern
+        // entries). Treat as "no annotations" rather than aborting.
+        return Object::empty_array().ptr();
+#else
         FATAL("No support for metadata on this type of kernel node: %" Pd32
               "\n",
               tag);
+#endif
       }
     }
 

@@ -128,6 +128,27 @@
     "libraries": {
       "cli": {
         "uri": "cli/cli.dart"
+      },
+      "js_interop": {
+        "uri": "js_interop/js_interop.dart",
+        "patches": "_internal/vm/lib/js_interop_patch.dart"
+      },
+      "js_interop_unsafe": {
+        "uri": "js_interop_unsafe/js_interop_unsafe.dart",
+        "patches": "_internal/vm/lib/js_interop_unsafe_patch.dart"
+      },
+      "_js_types": {
+        "uri": "_internal/vm/lib/js_types.dart"
+      },
+      "_js_helper": {
+        "uri": "_internal/vm/lib/js_helper.dart"
+      },
+      "js_util": {
+        "uri": "js_util/js_util.dart",
+        "patches": "_internal/vm/lib/js_util_patch.dart"
+      },
+      "_foreign_helper": {
+        "uri": "_internal/vm/lib/foreign_helper.dart"
       }
     }
   },

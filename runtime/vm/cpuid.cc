@@ -8,7 +8,8 @@
 #include "vm/flags.h"
 #include "vm/os.h"
 
-#if defined(HOST_ARCH_IA32) || defined(HOST_ARCH_X64)
+#if (defined(HOST_ARCH_IA32) || defined(HOST_ARCH_X64)) &&                     \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
 // GetCpuId() on Windows, __get_cpuid() on Linux
 #if defined(DART_HOST_OS_WINDOWS)
 #include <intrin.h>  // NOLINT
@@ -29,7 +30,8 @@ bool CpuId::abm_ = false;
 const char* CpuId::id_string_ = nullptr;
 const char* CpuId::brand_string_ = nullptr;
 
-#if defined(HOST_ARCH_IA32) || defined(HOST_ARCH_X64)
+#if (defined(HOST_ARCH_IA32) || defined(HOST_ARCH_X64)) &&                     \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
 
 static void GetCpuId(int32_t level, uint32_t info[4]) {
 #if defined(DART_HOST_OS_WINDOWS)
@@ -164,6 +166,22 @@ const char* CpuId::field(CpuInfoIndices idx) {
 }
 
 #endif  // defined(TARGET_ARCH_IA32) || defined(TARGET_ARCH_X64)
+
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+// On wasm there's no real CPU to inspect; provide stubs.
+void CpuId::Init() {
+  id_string_ = Utils::StrDup("wasm");
+  brand_string_ = Utils::StrDup("wasm");
+}
+void CpuId::Cleanup() {
+  free(const_cast<char*>(id_string_));  id_string_ = nullptr;
+  free(const_cast<char*>(brand_string_));  brand_string_ = nullptr;
+}
+const char* CpuId::id_string() { return Utils::StrDup(id_string_); }
+const char* CpuId::brand_string() { return Utils::StrDup(brand_string_); }
+const char* CpuId::field(CpuInfoIndices) { return Utils::StrDup(""); }
+#endif
+
 }  // namespace dart
 
 #endif  // !defined(DART_HOST_OS_MACOS)

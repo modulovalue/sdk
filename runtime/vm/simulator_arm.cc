@@ -1055,8 +1055,8 @@ intptr_t Simulator::WriteExclusiveW(uword addr, intptr_t value, Instr* instr) {
     return 1;  // Spurious failure.
   }
 
-  if (memory_.CompareExchange(addr, old_value, value,
-                              std::memory_order_relaxed)) {
+  if (memory_.CompareExchange<int32_t>(addr, old_value, value,
+                                       std::memory_order_relaxed)) {
     return 0;  // Success.
   }
   return 1;  // Failure.

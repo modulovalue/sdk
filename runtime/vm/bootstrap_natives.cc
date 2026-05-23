@@ -43,7 +43,8 @@ static const struct FfiNativeEntries {
 Dart_NativeFunction BootstrapNatives::Lookup(Dart_Handle name,
                                              int argument_count,
                                              bool* auto_setup_scope) {
-#if defined(DART_PRECOMPILER) && !defined(TESTING)
+#if defined(DART_PRECOMPILER) && !defined(TESTING) &&                          \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
   UNREACHABLE();  // gen_snapshot does not execute Dart code.
 #endif
   Thread* thread = Thread::Current();
@@ -81,7 +82,8 @@ void* BootstrapNatives::LookupFfiNative(const char* name,
 }
 
 const uint8_t* BootstrapNatives::Symbol(Dart_NativeFunction nf) {
-#if defined(DART_PRECOMPILER) && !defined(TESTING)
+#if defined(DART_PRECOMPILER) && !defined(TESTING) &&                          \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
   UNREACHABLE();  // gen_snapshot does not execute Dart code.
 #endif
   int num_entries = sizeof(BootStrapEntries) / sizeof(struct NativeEntries);

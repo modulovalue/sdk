@@ -480,7 +480,8 @@ char* Dart::DartInit(const Dart_InitializeParams* params) {
     // We need to initialize the constants here for the vm isolate thread due to
     // bootstrapping issues.
     T->InitVMConstants();
-#if defined(TARGET_ARCH_IA32) || defined(TARGET_ARCH_X64)
+#if (defined(TARGET_ARCH_IA32) || defined(TARGET_ARCH_X64)) &&                 \
+    !defined(DART_HOST_OS_EMSCRIPTEN)
     // Dart VM requires at least SSE2.
     if (!TargetCPUFeatures::sse2_supported()) {
       return Utils::StrDup("SSE2 is required.");

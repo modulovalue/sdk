@@ -2,6 +2,18 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/messages/codes.dart'
+    show LocatedMessage, Message;
+import 'package:_js_interop_checks/js_interop_checks.dart'
+    show JsInteropChecks, JsInteropDiagnosticReporter;
+import 'package:_js_interop_checks/src/js_interop.dart' as jsInteropHelper
+    show calculateTransitiveImportsOfJsInteropIfUsed;
+import 'package:_js_interop_checks/src/transformations/js_util_optimizer.dart'
+    show JsUtilOptimizer;
+import 'package:_js_interop_checks/src/transformations/shared_interop_transformer.dart'
+    show SharedInteropTransformer;
+import 'package:_js_interop_checks/src/transformations/static_interop_class_eraser.dart'
+    show StaticInteropClassEraser;
 import 'package:kernel/ast.dart';
 import 'package:kernel/class_hierarchy.dart';
 import 'package:kernel/clone.dart';
@@ -9,6 +21,7 @@ import 'package:kernel/core_types.dart';
 import 'package:kernel/reference_from_index.dart';
 import 'package:kernel/target/changed_structure_notifier.dart';
 import 'package:kernel/target/targets.dart';
+import 'package:kernel/type_environment.dart';
 
 import '../transformations/call_site_annotator.dart' as callSiteAnnotator;
 import '../transformations/deeply_immutable.dart' as deeply_immutable;
@@ -47,6 +60,9 @@ class VmTarget extends Target {
   Class? _double; // _Double, not double.
   Class? _closure;
   Class? _syncStarIterable;
+
+  // Cache for getNativeClasses; invalidated implicitly between modular passes.
+  Map<String, Class>? _nativeClasses;
 
   VmTarget(this.flags);
 
@@ -105,6 +121,14 @@ class VmTarget extends Target {
     'dart:nativewrappers',
     'dart:io',
     'dart:cli',
+
+    // Dart Live (VM-on-Wasm) embedder libraries for direct JS interop.
+    'dart:_js_helper',
+    'dart:_js_types',
+    'dart:js_interop',
+    'dart:js_interop_unsafe',
+    'dart:js_util',
+    'dart:_foreign_helper',
   ];
 
   @override
@@ -163,7 +187,94 @@ class VmTarget extends Target {
     // could possibly be done more cleanly after the VM no longer supports
     // doing constant evaluation on its own. See http://dartbug.com/32836
     "dart:typed_data",
+    // Phase 3 of Dart-Live `package:web` support: the JS-interop transformer
+    // (run from `performModularTransformationsOnLibraries`) needs these
+    // libraries indexed so `CoreTypes.index.getTopLevelProcedure` can
+    // resolve members like `FunctionToJSExportedDartFunction|get#toJS`.
+    "dart:js_interop",
+    "dart:js_interop_unsafe",
+    "dart:_js_types",
+    "dart:_js_helper",
+    "dart:js_util",
+    "dart:_foreign_helper",
   ];
+
+  // Phase 3 of the Dart-Live `package:web` support: lower `@JS()`-annotated
+  // extension type member calls (the whole `package:web` API surface) into
+  // the unsafe `getProperty` / `setProperty` / `callMethod` patches that
+  // ship in our `_internal/vm/lib/js_interop_unsafe_patch.dart`.
+  void _performJSInteropTransformations(
+    Component component,
+    CoreTypes coreTypes,
+    ClassHierarchy hierarchy,
+    Set<Library> interopDependentLibraries,
+    DiagnosticReporter diagnosticReporter,
+    ReferenceFromIndex? referenceFromIndex,
+  ) {
+    _nativeClasses ??= JsInteropChecks.getNativeClasses(component);
+    final jsInteropReporter = JsInteropDiagnosticReporter(
+      diagnosticReporter as DiagnosticReporter<Message, LocatedMessage>,
+    );
+    final jsInteropChecks = JsInteropChecks(
+      coreTypes,
+      hierarchy,
+      jsInteropReporter,
+      _nativeClasses!,
+      // Reuse the dart2wasm relaxation: don't reject `external` members
+      // without `@JS()`. Our user samples mix `@pragma("vm:external-name",
+      // ...)` natives (EmbedderJSEval etc.) with `@JS()`-annotated bindings,
+      // and there's no clean way to distinguish the two here.
+      isDart2Wasm: true,
+    );
+    for (final library in interopDependentLibraries) {
+      jsInteropChecks.visitLibrary(library);
+    }
+    final sharedInteropTransformer = SharedInteropTransformer(
+      TypeEnvironment(coreTypes, hierarchy),
+      jsInteropReporter,
+      jsInteropChecks.exportChecker,
+      jsInteropChecks.extensionIndex,
+    );
+    // JsUtilOptimizer rewrites external `@JS()` extension methods, getters,
+    // setters and constructors into calls to `dart:js_util` (which we patch
+    // to delegate to `dart:js_interop_unsafe`). The eraser drops `@JS()`
+    // class types so their values can hold a JSObject at runtime.
+    final jsUtilOptimizer = JsUtilOptimizer(
+      coreTypes,
+      hierarchy,
+      jsInteropChecks.extensionIndex,
+      isDart2JS: false,
+    );
+    // Erase `@staticInterop` class types to `dart:_js_helper.JSValue`, the
+    // concrete class that holds the JS handle at runtime. (Default eraser
+    // targets `dart:_interceptors.JavaScriptObject`, which the VM doesn't
+    // have.)
+    final jsValueClass = coreTypes.index.getClass(
+      'dart:_js_helper',
+      'JSValue',
+    );
+    final staticInteropEraser = StaticInteropClassEraser(
+      coreTypes,
+      eraseStaticInteropType: (staticInteropType) => InterfaceType(
+        jsValueClass,
+        staticInteropType.declaredNullability,
+      ),
+      additionalCoreLibraries: const {
+        '_js_helper',
+        '_js_types',
+        'js_interop',
+        'js_interop_unsafe',
+        'js_util',
+      },
+    );
+    for (final library in interopDependentLibraries) {
+      sharedInteropTransformer.visitLibrary(library);
+      if (!jsInteropReporter.hasJsInteropErrors) {
+        jsUtilOptimizer.visitLibrary(library);
+        staticInteropEraser.visitLibrary(library);
+      }
+    }
+  }
 
   @override
   void performModularTransformationsOnLibraries(
@@ -177,6 +288,54 @@ class VmTarget extends Target {
     void Function(String msg)? logger,
     ChangedStructureNotifier? changedStructureNotifier,
   }) {
+    // Run JS-interop lowering before mixin / FFI transformations: the shared
+    // transformer expects a fresh extension-type AST.
+    //
+    // Skip this entirely when we are *building* the SDK (i.e. compile_platform
+    // is producing vm_platform.dill). At that point `dart:js_interop` is one
+    // of the libraries being built — its members aren't in [CoreTypes.index]
+    // yet, so `JsInteropChecks`'s constructor would crash on lookups for
+    // `FunctionToJSExportedDartFunction|get#toJS`. User-code gen_kernel
+    // happens against an already-built platform dill where those lookups
+    // succeed, so it's the only path that actually needs the transformer.
+    final dartJSInterop = Uri.parse('dart:js_interop');
+    final buildingPlatform = libraries.any(
+      (l) => l.importUri == dartJSInterop,
+    );
+    if (buildingPlatform) {
+      logger?.call('Skipped JS interop transformations (building platform)');
+    } else {
+      // Restrict the transform to the libraries that this modular pass
+      // owns (i.e. user code). Dart-Live builds vm_platform.dill ahead of
+      // time and `gen_kernel` loads it from disk; the platform libraries
+      // are already in `component.libraries` but we must not revisit them
+      // (their `external` JS interop declarations are intentional and the
+      // checker would reject them).
+      final passLibs = libraries.toSet();
+      final transitive = jsInteropHelper
+          .calculateTransitiveImportsOfJsInteropIfUsed(
+            component.libraries,
+            dartJSInterop,
+          );
+      final interopDependent = <Library>{
+        for (final l in transitive)
+          if (passLibs.contains(l)) l,
+      };
+      if (interopDependent.isEmpty) {
+        logger?.call('Skipped JS interop transformations');
+      } else {
+        _performJSInteropTransformations(
+          component,
+          coreTypes,
+          hierarchy,
+          interopDependent,
+          diagnosticReporter,
+          referenceFromIndex,
+        );
+        logger?.call('Transformed JS interop classes');
+      }
+    }
+
     transformMixins.transformLibraries(
       this,
       coreTypes,

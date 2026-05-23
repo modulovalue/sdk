@@ -29,7 +29,7 @@ static_assert(offsetof(AbiAlignmentDouble, d) == 8,
               "FFI transformation alignment");
 static_assert(offsetof(AbiAlignmentUint64, i) == 8,
               "FFI transformation alignment");
-#elif (defined(HOST_ARCH_IA32) && /* NOLINT(whitespace/parens) */              \
+#elif (defined(HOST_ARCH_IA32) && !defined(DART_HOST_OS_EMSCRIPTEN) &&         \
        (defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||          \
         defined(DART_HOST_OS_ANDROID))) ||                                     \
     (defined(HOST_ARCH_ARM) && defined(DART_HOST_OS_IOS))
@@ -39,6 +39,14 @@ static_assert(offsetof(AbiAlignmentUint64, i) == 4,
               "FFI transformation alignment");
 #elif defined(HOST_ARCH_IA32) && defined(DART_HOST_OS_WINDOWS) ||              \
     defined(HOST_ARCH_ARM)
+static_assert(offsetof(AbiAlignmentDouble, d) == 8,
+              "FFI transformation alignment");
+static_assert(offsetof(AbiAlignmentUint64, i) == 8,
+              "FFI transformation alignment");
+#elif defined(DART_HOST_OS_EMSCRIPTEN)
+// wasm32 uses 8-byte alignment for 64-bit scalars even though pointers are
+// 32-bit. The IL viewer build doesn't actually exercise the FFI runtime path,
+// so the host alignment is irrelevant for our purposes.
 static_assert(offsetof(AbiAlignmentDouble, d) == 8,
               "FFI transformation alignment");
 static_assert(offsetof(AbiAlignmentUint64, i) == 8,

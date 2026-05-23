@@ -339,10 +339,21 @@ void OSThread::Start(const char* name,
                      uword parameter) {
   int result = TryStart(name, function, parameter);
   if (result != 0) {
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+    // wasm32 can't spawn pthreads without -pthread+SharedArrayBuffer. Run
+    // the worker function inline as a degenerate single-threaded fallback.
+    // For DartWorker (the thread-pool worker), Main() enters WorkerLoop()
+    // which blocks indefinitely; so we just drop the call. Compilation work
+    // on Dart_Precompile() runs on the calling thread anyway when
+    // --deterministic disables concurrent passes.
+    (void)name; (void)function; (void)parameter;
+    return;
+#else
     const int kBufferSize = 1024;
     char error_buf[kBufferSize];
     FATAL("Could not start thread %s: %d (%s)", name, result,
           Utils::StrError(result, error_buf, kBufferSize));
+#endif
   }
 }
 

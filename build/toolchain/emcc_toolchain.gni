@@ -1,0 +1,132 @@
+# Copyright (c) 2026 The Dart project authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Minimal Emscripten-based toolchain template. Models clang/gcc closely but
+# drops gcc-isms (--start-group, -Wl,-soname, post-link symbolizer) that don't
+# apply to wasm output. Skips solink (Emscripten has no shared libraries in
+# the usual sense — we only build static archives and one final executable).
+
+template("emcc_toolchain") {
+  toolchain(target_name) {
+    assert(defined(invoker.cc))
+    assert(defined(invoker.cxx))
+    assert(defined(invoker.ar))
+    assert(defined(invoker.ld))
+
+    cc = invoker.cc
+    cxx = invoker.cxx
+    ar = invoker.ar
+    ld = invoker.ld
+
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+
+    # Wasm-specific feature flags. -matomics enables wasm atomic ops (required
+    # for std::atomic_ref, which the Dart VM simulator uses). -mbulk-memory
+    # enables fast memory.fill/copy ops. -msimd128 enables wasm SIMD. These are
+    # all wasm proposals that are now in the MVP spec (or near-MVP).
+    _wasm_features = "-matomics -mbulk-memory -msimd128"
+
+    tool("cc") {
+      depfile = "{{output}}.d"
+      command = "$cc -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} $_wasm_features -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "CC {{output}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("cxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} $_wasm_features -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "CXX {{output}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("asm") {
+      depfile = "{{output}}.d"
+      command = "$cc -MMD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} $_wasm_features -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "ASM {{output}}"
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("alink") {
+      rspfile = "{{output}}.rsp"
+      command = "rm -f {{output}} && $ar rcs {{output}} @$rspfile"
+      description = "AR {{output}}"
+      rspfile_content = "{{inputs}}"
+      outputs =
+          [ "{{target_out_dir}}/{{target_output_name}}{{output_extension}}" ]
+      default_output_extension = ".a"
+      output_prefix = "lib"
+    }
+
+    # Emscripten has no shared libraries in the traditional sense. To keep the
+    # rest of Dart's GN graph happy (it has _copy rules that consume .so files
+    # produced by _shared toolchains), emit a static archive but name it .so.
+    # Real link errors will surface later in ninja, not here in gn gen.
+    tool("solink") {
+      soname = "{{target_output_name}}{{output_extension}}"
+      sofile = "{{root_out_dir}}/$soname"
+      tocfile = sofile + ".TOC"
+      rspfile = sofile + ".rsp"
+      command = "rm -f $sofile && $ar rcs $sofile @$rspfile && touch $tocfile"
+      description = "SOLINK(emcc-static) $sofile"
+      rspfile_content = "{{inputs}}"
+      restat = true
+      outputs = [
+        sofile,
+        tocfile,
+      ]
+      default_output_extension = ".so"
+      output_prefix = "lib"
+      link_output = sofile
+      depend_output = tocfile
+    }
+
+    tool("link") {
+      exename = "{{target_output_name}}{{output_extension}}"
+      outfile = "{{root_out_dir}}/$exename"
+      rspfile = "$outfile.rsp"
+      # Dart's build expects an unsuffixed executable AND a .sym symbol file
+      # alongside (gcc_toolchain produces these via a post-link symbolizer).
+      # We can't run dart_profiler_symbols.py against a wasm binary, so just
+      # touch the .sym to satisfy the dependency graph.
+      symfile = "$outfile.sym"
+      command = "$ld {{ldflags}} -o $outfile @$rspfile {{solibs}} {{libs}} && touch $symfile"
+      description = "LINK $outfile"
+      rspfile_content = "{{inputs}}"
+      default_output_extension = ""
+      outputs = [
+        outfile,
+        symfile,
+      ]
+    }
+
+    tool("stamp") {
+      command = "touch {{output}}"
+      description = "STAMP {{output}}"
+    }
+
+    tool("copy") {
+      command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+      description = "COPY {{source}} {{output}}"
+    }
+
+    toolchain_args = {
+      current_cpu = "wasm"
+      current_os = "wasm"
+      target_os = target_os
+      target_cpu = target_cpu
+      is_clang = true
+      if (defined(invoker.toolchain_args)) {
+        forward_variables_from(invoker.toolchain_args, "*")
+      }
+    }
+  }
+}

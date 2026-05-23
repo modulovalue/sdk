@@ -1097,6 +1097,52 @@ ErrorPtr Service::HandleIsolateMessage(Isolate* isolate, const Array& msg) {
   return MaybePause(isolate, error);
 }
 
+// Synchronous in-process service RPC for embedders that don't run the
+// service isolate (single-threaded wasm, etc.). Constructs a transient
+// JSONStream, dispatches the named method on the current isolate, and
+// returns the response bytes. Caller owns the returned buffer.
+char* Service::InvokeRpcSync(const char* method_name,
+                             const char** param_keys,
+                             const char** param_values,
+                             intptr_t num_params) {
+  Thread* T = Thread::Current();
+  if (T == nullptr) return nullptr;
+  Isolate* isolate = T->isolate();
+  if (isolate == nullptr) return nullptr;
+  StackZone zone(T);
+  JSONStream js;
+  // Setup needs Dart-typed params; we pass empty arrays and use SetParams
+  // (which stores C-string keys/values directly into the stream).
+  const Array& empty = Object::empty_array();
+  const String& method = String::Handle(zone.GetZone(),
+                                        String::New(method_name));
+  js.Setup(zone.GetZone(), ILLEGAL_PORT, Instance::Handle(zone.GetZone()),
+           method, empty, empty, /*parameters_are_dart_objects=*/false);
+  if (num_params > 0) {
+    js.SetParams(param_keys, param_values, num_params);
+  }
+  RingServiceIdZone* id_zone = &isolate->EnsureDefaultServiceIdZone();
+  js.set_id_zone(*id_zone);
+
+  const ServiceMethodDescriptor* m = FindMethod(method_name);
+  if (m == nullptr) return nullptr;
+  m->entry(T, &js);
+
+  // The protocol's outer envelope ({"jsonrpc":..., "result":{...}}) is
+  // closed by PostReply() in the normal path. We skip PostReply (no port,
+  // no seq), so we finish the message manually.
+  js.buffer()->AddChar('}');
+
+  // Copy out the response so the caller can free() it independently of the
+  // stream's internal buffer lifetime.
+  const char* body = js.ToCString();
+  if (body == nullptr) return nullptr;
+  size_t n = strlen(body);
+  char* out = static_cast<char*>(malloc(n + 1));
+  memcpy(out, body, n + 1);
+  return out;
+}
+
 static void Finalizer(void* isolate_callback_data, void* buffer) {
   free(buffer);
 }

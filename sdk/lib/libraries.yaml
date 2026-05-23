@@ -123,6 +123,40 @@ vm:
     cli:
       uri: "cli/cli.dart"
 
+    # JS interop libraries, used by our wasm-embedded VM (Dart Live).
+    # In a standard Dart VM these are unimplemented; the patches below
+    # bind them to embedder natives that forward through a handle-based
+    # JS interop layer.
+    js_interop:
+      uri: "js_interop/js_interop.dart"
+      patches: "_internal/vm/lib/js_interop_patch.dart"
+
+    js_interop_unsafe:
+      uri: "js_interop_unsafe/js_interop_unsafe.dart"
+      patches: "_internal/vm/lib/js_interop_unsafe_patch.dart"
+
+    _js_types:
+      uri: "_internal/vm/lib/js_types.dart"
+
+    _js_helper:
+      uri: "_internal/vm/lib/js_helper.dart"
+
+    # Standard dart:js_util — Phase 3 of Dart-Live `package:web` support.
+    # The `JsUtilOptimizer` lowers `@JS()` extension-type method calls into
+    # calls to these top-level helpers; we patch them to delegate to
+    # `dart:js_interop_unsafe`.
+    js_util:
+      uri: "js_util/js_util.dart"
+      patches: "_internal/vm/lib/js_util_patch.dart"
+
+    # `dart:_foreign_helper` is a dart2js-only library. We define a stub
+    # so the JsUtilOptimizer's `coreTypes.index.getTopLevelProcedure(
+    # 'dart:_foreign_helper', 'JS')` lookup succeeds; the procedure is
+    # only used by the optimizer for `is this already a foreign-JS call?`
+    # checks, never emitted by lowering.
+    _foreign_helper:
+      uri: "_internal/vm/lib/foreign_helper.dart"
+
 wasm:
   include:
     - target: "wasm_js_common"

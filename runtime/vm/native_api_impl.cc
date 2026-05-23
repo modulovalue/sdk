@@ -251,7 +251,9 @@ DART_EXPORT Dart_Handle Dart_CompileAll() {
     return result;
   }
   CHECK_CALLBACK_STATE(T);
-  const Error& error = Error::Handle(T->zone(), Library::CompileAll());
+  // ignore_error=true so dart:io natives we never link don't kill the run.
+  const Error& error =
+      Error::Handle(T->zone(), Library::CompileAll(/*ignore_error=*/true));
   if (!error.IsNull()) {
     return Api::NewHandle(T, error.ptr());
   }

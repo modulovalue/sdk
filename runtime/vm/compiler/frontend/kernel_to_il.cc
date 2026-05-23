@@ -5482,7 +5482,12 @@ Fragment FlowGraphBuilder::FfiNativeLookupAddress(
   // IA32 only has JIT and no pool. This function will only be compiled if
   // immediately run afterwards, so do the lookup here.
   char* error = nullptr;
-#if !defined(DART_PRECOMPILER) || defined(TESTING)
+#if defined(DART_HOST_OS_EMSCRIPTEN)
+  // FFI native lookup isn't reachable in the IL extractor flow (the user code
+  // we're inspecting doesn't actually exercise FFI). Return 0 — the surrounding
+  // code path is dead in our build.
+  const uintptr_t function_address = 0;
+#elif !defined(DART_PRECOMPILER) || defined(TESTING)
   const uintptr_t function_address =
       FfiResolveInternal(asset_id, symbol, arg_n, &error);
 #else
