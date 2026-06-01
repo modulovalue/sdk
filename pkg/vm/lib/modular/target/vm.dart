@@ -23,6 +23,7 @@ import 'package:kernel/target/changed_structure_notifier.dart';
 import 'package:kernel/target/targets.dart';
 import 'package:kernel/type_environment.dart';
 
+import '../../transformations/monomorphize.dart' as monomorphize;
 import '../transformations/call_site_annotator.dart' as callSiteAnnotator;
 import '../transformations/deeply_immutable.dart' as deeply_immutable;
 import '../transformations/lowering.dart'
@@ -417,6 +418,12 @@ class VmTarget extends Target {
       hierarchy,
     );
     logger?.call("Annotated call sites");
+
+    // Monomorphize class type parameters annotated with
+    // `@pragma('vm:monomorphic')`. Runs while extension types are still intact
+    // so it can verify representation types. No-op unless such a pragma exists.
+    monomorphize.transformLibraries(libraries, coreTypes, diagnosticReporter);
+    logger?.call("Monomorphized type parameters");
   }
 
   @override
