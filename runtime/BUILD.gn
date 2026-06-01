@@ -321,6 +321,9 @@ config("dart_config") {
       ]
     } else {
       cflags += [
+        # The configured toolchain may actually be clang even when is_clang is
+        # false; tolerate GCC-only warning flags below instead of erroring.
+        "-Wno-unknown-warning-option",
         "-Wno-cast-function-type",
         "-Wno-dangling-reference",
       ]

@@ -63,7 +63,8 @@ config("libdart_vm_config") {
 
     # Clang with libc++ does not require an explicit atomic library reference.
     # (similar to https://github.com/flutter/buildroot/blob/master/build/config/compiler/BUILD.gn#L562)
-    if (!is_clang) {
+    # macOS has no separate libatomic even when is_clang is left false.
+    if (!is_clang && !is_mac) {
       libs += [ "atomic" ]
     }
   }
