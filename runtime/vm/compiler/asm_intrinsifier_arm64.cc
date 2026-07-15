@@ -1004,6 +1004,12 @@ void AsmIntrinsifier::Double_sub(Assembler* assembler, Label* normal_ir_body) {
   DoubleArithmeticOperations(assembler, normal_ir_body, Token::kSUB);
 }
 
+void AsmIntrinsifier::Int32x4BitAnd(Assembler* assembler,
+                                   Label* normal_ir_body) {
+  // Handled by the graph intrinsifier (unboxed SIMD) on this architecture.
+  __ Bind(normal_ir_body);
+}
+
 void AsmIntrinsifier::Double_div(Assembler* assembler, Label* normal_ir_body) {
   DoubleArithmeticOperations(assembler, normal_ir_body, Token::kDIV);
 }

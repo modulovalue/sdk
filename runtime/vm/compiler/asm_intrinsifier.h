@@ -38,6 +38,9 @@ class AsmIntrinsifier : public AllStatic {
 
 #undef DECLARE_FUNCTION
 
+  // Graph intrinsic on unboxed-SIMD backends; asm intrinsic only on RISC-V.
+  static void Int32x4BitAnd(Assembler* assembler, Label* normal_ir_body);
+
   static void StringEquality(Assembler* assembler,
                              Register obj1,
                              Register obj2,

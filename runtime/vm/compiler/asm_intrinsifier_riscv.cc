@@ -1057,6 +1057,33 @@ void AsmIntrinsifier::Double_div(Assembler* assembler, Label* normal_ir_body) {
   DoubleArithmeticOperations(assembler, normal_ir_body, Token::kDIV);
 }
 
+// Int32x4 & Int32x4 using the RISC-V vector extension (vand.vv over 4 lanes).
+// Only emitted when the target supports RV_V; otherwise falls through to the
+// normal Dart implementation.
+void AsmIntrinsifier::Int32x4BitAnd(Assembler* assembler,
+                                    Label* normal_ir_body) {
+  if (__ Supports(RV_V)) {
+    __ lx(A0, Address(SP, 1 * target::kWordSize));  // Receiver (this).
+    __ lx(A1, Address(SP, 0 * target::kWordSize));  // Other.
+    // Configure the vector unit for 4 x 32-bit lanes (128 bits).
+    __ li(TMP, 4);
+    __ vsetvli(TMP2, TMP, e32, m1, ta, ma);
+    // Load both 128-bit payloads and AND them lane-wise.
+    __ AddImmediate(TMP, A0, target::Int32x4::value_offset() - kHeapObjectTag);
+    __ vle32v(V1, Address(TMP));
+    __ AddImmediate(TMP, A1, target::Int32x4::value_offset() - kHeapObjectTag);
+    __ vle32v(V2, Address(TMP));
+    __ vandvv(V1, V1, V2);
+    // Allocate the result and store the vector into it.
+    const Class& int32x4_class = Int32x4Class();
+    __ TryAllocate(int32x4_class, normal_ir_body, Assembler::kFarJump, A0, TMP);
+    __ AddImmediate(TMP, A0, target::Int32x4::value_offset() - kHeapObjectTag);
+    __ vse32v(V1, Address(TMP));
+    __ ret();
+  }
+  __ Bind(normal_ir_body);
+}
+
 // Left is double, right is integer (Mint or Smi)
 void AsmIntrinsifier::Double_mulFromInteger(Assembler* assembler,
                                             Label* normal_ir_body) {

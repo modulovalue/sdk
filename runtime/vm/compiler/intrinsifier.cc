@@ -127,7 +127,10 @@ bool Intrinsifier::Intrinsify(const ParsedFunction& parsed_function,
   }
 
   switch (function.recognized_kind()) {
-    ASM_INTRINSICS_LIST(EMIT_CASE);
+    ASM_INTRINSICS_LIST(EMIT_CASE)
+    // Int32x4BitAnd is a graph intrinsic on backends with unboxed SIMD; on
+    // RISC-V (where GraphIntrinsify bails) fall back to a vector asm intrinsic.
+    EMIT_CASE(TypedDataLibrary, _Int32x4, &, Int32x4BitAnd, 0x0da1c43d)
     default:
       break;
   }

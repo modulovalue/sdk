@@ -2106,6 +2106,33 @@ void MicroAssembler::vmvvx(VRegister vd, Register rs1, VectorMask vm) {
          EncodeFunct3(OPIVX) | EncodeFunct6(VMV) | vm);
 }
 
+void MicroAssembler::vandvv(VRegister vd,
+                            VRegister vs2,
+                            VRegister vs1,
+                            VectorMask vm) {
+  ASSERT(Supports(RV_V));
+  Emit32(EncodeOpcode(OPV) | EncodeVd(vd) | EncodeVs1(vs1) | EncodeVs2(vs2) |
+         EncodeFunct3(OPIVV) | EncodeFunct6(VAND) | vm);
+}
+
+void MicroAssembler::vorvv(VRegister vd,
+                           VRegister vs2,
+                           VRegister vs1,
+                           VectorMask vm) {
+  ASSERT(Supports(RV_V));
+  Emit32(EncodeOpcode(OPV) | EncodeVd(vd) | EncodeVs1(vs1) | EncodeVs2(vs2) |
+         EncodeFunct3(OPIVV) | EncodeFunct6(VOR) | vm);
+}
+
+void MicroAssembler::vxorvv(VRegister vd,
+                            VRegister vs2,
+                            VRegister vs1,
+                            VectorMask vm) {
+  ASSERT(Supports(RV_V));
+  Emit32(EncodeOpcode(OPV) | EncodeVd(vd) | EncodeVs1(vs1) | EncodeVs2(vs2) |
+         EncodeFunct3(OPIVV) | EncodeFunct6(VXOR) | vm);
+}
+
 void MicroAssembler::lb(Register rd, Address addr, std::memory_order order) {
   ASSERT(addr.offset() == 0);
   ASSERT((order == std::memory_order_acquire) ||
